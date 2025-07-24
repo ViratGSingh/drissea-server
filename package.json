@@ -9,7 +9,11 @@
     "cf-typegen": "wrangler types"
   },
   "dependencies": {
+    "axios": "^1.10.0",
     "chanfana": "^2.6.3",
+    "cheerio": "^1.1.0",
+    "firebase": "^11.10.0",
+    "groq-sdk": "^0.26.0",
     "hono": "^4.6.20",
     "zod": "^3.24.1"
   },

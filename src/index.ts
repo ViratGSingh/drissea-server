@@ -1,9 +1,12 @@
 import { fromHono } from "chanfana";
 import { Hono } from "hono";
-import { TaskCreate } from "./endpoints/taskCreate";
-import { TaskDelete } from "./endpoints/taskDelete";
-import { TaskFetch } from "./endpoints/taskFetch";
-import { TaskList } from "./endpoints/taskList";
+import { OgExtract } from "./endpoints/ogThumbnail";
+import { SearchData } from "./endpoints/searchData";
+import { IGVideoData } from "./endpoints/igVideoData";
+import { IGSaveVideoData } from "./endpoints/igSaveVideoData";
+import { SerpData } from "./endpoints/serpData";
+import { IGGenAnswer } from "./endpoints/igGenAnswer";
+import { SaveResultData } from "./endpoints/saveResultData";
 
 // Start a Hono app
 const app = new Hono<{ Bindings: Env }>();
@@ -14,10 +17,13 @@ const openapi = fromHono(app, {
 });
 
 // Register OpenAPI endpoints
-openapi.get("/api/tasks", TaskList);
-openapi.post("/api/tasks", TaskCreate);
-openapi.get("/api/tasks/:taskSlug", TaskFetch);
-openapi.delete("/api/tasks/:taskSlug", TaskDelete);
+openapi.get("/api/og-extract", OgExtract);
+openapi.get("/api/search-data", SearchData);
+openapi.post("/api/save-search-data", SaveResultData);
+openapi.get("/api/instagram/extract/reel", IGVideoData);
+openapi.get("/api/search/google", SerpData);
+openapi.post("/api/instagram/backup/data", IGSaveVideoData);
+openapi.post("/api/instagram/gen/answer", IGGenAnswer);
 
 // You may also register routes for non OpenAPI directly on Hono
 // app.get('/test', (c) => c.text('Hono!'))
