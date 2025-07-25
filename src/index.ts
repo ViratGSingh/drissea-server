@@ -1,12 +1,13 @@
 import { fromHono } from "chanfana";
 import { Hono } from "hono";
-import { OgExtract } from "./endpoints/ogThumbnail";
-import { SearchData } from "./endpoints/searchData";
-import { IGVideoData } from "./endpoints/igVideoData";
-import { IGSaveVideoData } from "./endpoints/igSaveVideoData";
-import { SerpData } from "./endpoints/serpData";
-import { IGGenAnswer } from "./endpoints/igGenAnswer";
-import { SaveResultData } from "./endpoints/saveResultData";
+import { OgExtract } from "./endpoints/ogThumbnail.js";
+import { SearchData } from "./endpoints/searchData.js";
+import { IGVideoData } from "./endpoints/igVideoData.js";
+import { IGSaveVideoData } from "./endpoints/igSaveVideoData.js";
+import { SerpData } from "./endpoints/serpData.js";
+import { IGGenAnswer } from "./endpoints/igGenAnswer.js";
+import { SaveResultData } from "./endpoints/saveResultData.js";
+import { serve } from '@hono/node-server';
 
 // Start a Hono app
 const app = new Hono<{ Bindings: Env }>();
@@ -28,5 +29,12 @@ openapi.post("/api/instagram/gen/answer", IGGenAnswer);
 // You may also register routes for non OpenAPI directly on Hono
 // app.get('/test', (c) => c.text('Hono!'))
 
-// Export the Hono app
-export default app;
+const port = parseInt(process.env.PORT || '3000');
+console.log(`🚀 Hono server running at http://localhost:${port}`);
+serve({
+  fetch: app.fetch,
+  port,
+});
+
+// // Export the Hono app
+// export default app;

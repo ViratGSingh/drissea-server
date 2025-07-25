@@ -1,8 +1,7 @@
 import { OpenAPIRoute, Str } from "chanfana";
 import { z } from "zod";
-import { initFirebase } from "../firebase";
-import { type AppContext } from "../types";
-import { success } from "zod/v4";
+import { type AppContext } from "../types.js";
+import 'dotenv/config';
 
 export class SearchData extends OpenAPIRoute {
   schema = {
@@ -75,8 +74,8 @@ export class SearchData extends OpenAPIRoute {
 
     // Authorization check
     const authHeader = c.req.header("Authorization");
-    if (!authHeader || authHeader !== `Bearer ${c.env.API_SECRET}`) {
-      return Response.json(
+    if (!authHeader || authHeader !== `Bearer ${process.env.API_SECRET}`) {
+      return c.json(
         {
           success: false,
           error: "Unauthorized",
@@ -88,13 +87,13 @@ export class SearchData extends OpenAPIRoute {
     const { searchId } = data.query;
 
     try {
-      const projectId = c.env.FIREBASE_PROJECT_ID;
-      const apiKey = c.env.FIREBASE_API_KEY;
+      const projectId = process.env.FIREBASE_PROJECT_ID;
+      const apiKey = process.env.FIREBASE_API_KEY;
       const url = `https://firestore.googleapis.com/v1/projects/${projectId}/databases/(default)/documents/answers/${searchId}?key=${apiKey}`;
       const res = await fetch(url);
 
       if (!res.ok) {
-        return Response.json({ error: url }, { status: 404 });
+        return c.json({ error: url }, { status: 404 });
       }
 
       const json = (await res.json()) as { fields?: any };
@@ -102,18 +101,18 @@ export class SearchData extends OpenAPIRoute {
 
       const query = fields?.query?.stringValue || "";
       const answer = fields?.answer?.stringValue || "";
-      const process = fields?.process?.stringValue || "";
+      const processText = fields?.process?.stringValue || "";
       const sourceUrls = (fields?.source_links?.arrayValue?.values || []).map((v: any) => v.stringValue);
 
       return {
         query,
-        process,
+        process: processText,
         answer,
         sourceUrls,
       };
     } catch (error: any) {
       console.error("Firestore REST error:", error);
-      return Response.json({ error: "Internal server error" }, { status: 500 });
+      return c.json({ error: "Internal server error" }, { status: 500 });
     }
   }
 }

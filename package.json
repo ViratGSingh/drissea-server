@@ -3,23 +3,26 @@
   "version": "0.0.1",
   "private": true,
   "scripts": {
-    "deploy": "wrangler deploy",
-    "dev": "wrangler dev",
-    "start": "wrangler dev",
-    "cf-typegen": "wrangler types"
+    "dev": "tsx watch src/index.ts",
+    "build": "tsc",
+    "start": "node dist/index.js"
   },
   "dependencies": {
+    "@hono/node-server": "^1.17.1",
     "axios": "^1.10.0",
     "chanfana": "^2.6.3",
     "cheerio": "^1.1.0",
+    "dotenv": "^17.2.1",
     "firebase": "^11.10.0",
     "groq-sdk": "^0.26.0",
     "hono": "^4.6.20",
+    "tsx": "^4.20.3",
     "zod": "^3.24.1"
   },
   "devDependencies": {
     "@types/node": "22.13.0",
     "@types/service-worker-mock": "^2.0.4",
-    "wrangler": "^4.23.0"
+    "ts-node": "^10.9.2",
+    "typescript": "^5.8.3"
   }
 }

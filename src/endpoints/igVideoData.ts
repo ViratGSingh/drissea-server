@@ -1,9 +1,8 @@
 import { OpenAPIRoute, Str } from "chanfana";
 import { z } from "zod";
-import { initFirebase } from "../firebase";
-import { type AppContext } from "../types";
+import { type AppContext } from "../types.js";
 import { Groq } from "groq-sdk";
-import { success } from "zod/v4";
+import 'dotenv/config';
 
 export class IGVideoData extends OpenAPIRoute {
   schema = {
@@ -69,10 +68,8 @@ export class IGVideoData extends OpenAPIRoute {
 
     // Authorization check
     const authHeader = c.req.header("Authorization");
-    if (!authHeader || authHeader !== `Bearer ${c.env.API_SECRET}`) {
-      console.log(c.env.API_SECRET);
-      console.log(authHeader);
-      return Response.json(
+    if (!authHeader || authHeader !== `Bearer ${process.env.API_SECRET}`) {
+      return c.json(
         {
           success: false,
           error: "Unauthorized",
@@ -90,12 +87,12 @@ export class IGVideoData extends OpenAPIRoute {
       method: "GET",
       headers: {
         "x-rapidapi-host": "instagram-scraper-api2.p.rapidapi.com",
-        "x-rapidapi-key": c.env.IG_RAPID_API_KEY,
+        "x-rapidapi-key": `${process.env.IG_RAPID_API_KEY}`,
       },
     });
 
     if (!response.ok) {
-      return Response.json({ error: "Failed to fetch IG data", success: false}, { status: 400 });
+      return c.json({ error: "Failed to fetch IG data", success: false}, { status: 400 });
     }
 
     const json = (await response.json()) as { data?: any };
@@ -112,14 +109,14 @@ export class IGVideoData extends OpenAPIRoute {
 
 
     if (!videoUrl) {
-      return Response.json({ error: "No video URL found" }, { status: 404 });
+      return c.json({ error: "No video URL found" }, { status: 404 });
     }
 
 
     var translatedText =  "";
     if(hasAudio==true){
       // Translate using Groq SDK
-      const groq = new Groq({ apiKey: c.env.GROQ_API_KEY });
+      const groq = new Groq({ apiKey: process.env.GROQ_API_KEY });
       const transcriptResponse = await groq.audio.translations.create({
         url:videoUrl,
         model: "whisper-large-v3",
@@ -129,7 +126,7 @@ export class IGVideoData extends OpenAPIRoute {
       translatedText = transcriptResponse.text;
     }
 
-    return Response.json({
+    return c.json({
       "data":{
         "user":{
           "id": userId,

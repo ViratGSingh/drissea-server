@@ -1,7 +1,8 @@
 import { OpenAPIRoute, Str } from "chanfana";
 import { z } from "zod";
-import { type AppContext } from "../types";
+import { type AppContext } from "../types.js";
 import Groq from "groq-sdk";
+import 'dotenv/config';
 
 export class IGGenAnswer extends OpenAPIRoute {
   schema = {
@@ -62,18 +63,18 @@ export class IGGenAnswer extends OpenAPIRoute {
   async handle(c: AppContext) {
     // Authorization check
     const authHeader = c.req.header("Authorization");
-    if (!authHeader || authHeader !== `Bearer ${c.env.API_SECRET}`) {
-      return Response.json(
+    if (!authHeader || authHeader !== `Bearer ${process.env.API_SECRET}`) {
+      return c.json(
         {
           success: false,
           error: "Unauthorized",
         },
-        { status: 401 }
+        401
       );
     }
     try {
       const groq = new Groq({
-        apiKey: c.env.GROQ_API_KEY,
+        apiKey: process.env.GROQ_API_KEY,
       });
       const data = await this.getValidatedData<typeof this.schema>();
       const { query, results } = data.body;
@@ -122,10 +123,10 @@ ${formattedSources}`;
       });
 
       const content = chatCompletion.choices[0]?.message?.content || "";
-      return Response.json({ content });
+      return c.json({ content });
     } catch (error) {
       console.error("Error in IGGenAnswer route:", error);
-      return Response.json({ error: "Something went wrong while generating the answer." }, { status: 500 });
+      return c.json({ error: "Something went wrong while generating the answer." }, 500);
     }
   }
 }

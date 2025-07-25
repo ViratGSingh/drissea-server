@@ -1,7 +1,7 @@
 import { OpenAPIRoute, Str } from "chanfana";
 import { z } from "zod";
-import { initFirebase } from "../firebase";
-import { type AppContext } from "../types";
+import { type AppContext } from "../types.js";
+import 'dotenv/config';
 
 interface SerpApiResponse {
   organic?: { link: string }[];
@@ -75,7 +75,7 @@ export class SerpData extends OpenAPIRoute {
 
     // Authorization check
     const authHeader = c.req.header("Authorization");
-    if (!authHeader || authHeader !== `Bearer ${c.env.API_SECRET}`) {
+    if (!authHeader || authHeader !== `Bearer ${process.env.API_SECRET}`) {
       return Response.json(
         {
           success: false,
@@ -93,12 +93,12 @@ export class SerpData extends OpenAPIRoute {
       const res = await fetch(serpUrl, {
         method: "POST",
         headers: {
-          "X-API-KEY": c.env.SERP_API_KEY,
+          "X-API-KEY": `${process.env.SERP_API_KEY}`,
           "Content-Type": "application/json",
         },
         body: JSON.stringify({
           q: `${query} site:instagram.com`,
-          api_key: c.env.SERP_API_KEY,
+          api_key: process.env.SERP_API_KEY,
           num: "20",
           gl: "in",
           hl: "en",
@@ -120,9 +120,3 @@ export class SerpData extends OpenAPIRoute {
   }
 }
 
-type Answer = {
-  created_at: string;
-  process: string;
-  reply: string;
-  source_links: string[];
-};

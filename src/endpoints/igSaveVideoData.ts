@@ -1,7 +1,7 @@
 import { OpenAPIRoute, Str } from "chanfana";
 import { z } from "zod";
-import { type AppContext } from "../types";
-import { error } from "console";
+import { type AppContext } from "../types.js";
+import 'dotenv/config';
 
 export class IGSaveVideoData extends OpenAPIRoute {
   schema = {
@@ -64,13 +64,13 @@ export class IGSaveVideoData extends OpenAPIRoute {
   async handle(c: AppContext) {
     // Authorization check
     const authHeader = c.req.header("Authorization");
-    if (!authHeader || authHeader !== `Bearer ${c.env.API_SECRET}`) {
-      return Response.json(
+    if (!authHeader || authHeader !== `Bearer ${process.env.API_SECRET}`) {
+      return c.json(
         {
           success: false,
           error: "Unauthorized",
         },
-        { status: 401 }
+        401
       );
     }
 
@@ -89,8 +89,8 @@ export class IGSaveVideoData extends OpenAPIRoute {
     } = data.body;
 
     // Firestore checks and saves in parallel
-    const projectId = c.env.FIREBASE_PROJECT_ID;
-    const firebaseKey = c.env.FIREBASE_API_KEY;
+    const projectId = process.env.FIREBASE_PROJECT_ID;
+    const firebaseKey = process.env.FIREBASE_API_KEY;
 
     const creatorIndexUrl = `https://firestore.googleapis.com/v1/projects/${projectId}/databases/(default)/documents/creators/${userId}?key=${firebaseKey}`;
     const reelIndexUrl = `https://firestore.googleapis.com/v1/projects/${projectId}/databases/(default)/documents/reels/${videoId}?key=${firebaseKey}`;
@@ -187,11 +187,11 @@ export class IGSaveVideoData extends OpenAPIRoute {
             }),
           });
         }
-      return Response.json({
+      return c.json({
         success: true,
       });
       } catch (e) {
-        return Response.json({
+        return c.json({
           success: false,
           error:"Unable to check/update data"
         });

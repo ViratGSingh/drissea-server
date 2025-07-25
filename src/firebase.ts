@@ -1,6 +1,6 @@
 // src/firebase.ts
-import { initializeApp, getApps, getApp, FirebaseApp } from "firebase/app";
-import type { Env } from "./types";
+import { initializeApp, getApps, getApp, type FirebaseApp } from "firebase/app";
+import type { Env } from "./types.js";
 
 export function initFirebase(env: Env): FirebaseApp {
   const firebaseConfig = {

@@ -1,7 +1,7 @@
 import { OpenAPIRoute, Str } from "chanfana";
 import { z } from "zod";
-import { initFirebase } from "../firebase";
-import { type AppContext } from "../types";
+import { type AppContext } from "../types.js";
+import 'dotenv/config';
 
 export class SaveResultData extends OpenAPIRoute {
   schema = {
@@ -68,25 +68,25 @@ export class SaveResultData extends OpenAPIRoute {
   async handle(c: AppContext) {
     // Authorization check
     const authHeader = c.req.header("Authorization");
-    if (!authHeader || authHeader !== `Bearer ${c.env.API_SECRET}`) {
-      return Response.json(
+    if (!authHeader || authHeader !== `Bearer ${process.env.API_SECRET}`) {
+      return c.json(
         {
           success: false,
           error: "Unauthorized",
         },
-        { status: 401 }
+        401
       );
     }
 
     const data = await this.getValidatedData<typeof this.schema>();
-    const { query, process, answer, sourceUrls } = data.body;
+    const { query, process: processText, answer, sourceUrls } = data.body;
 
     const firestoreDoc = {
       fields: {
         created_at: { timestampValue: new Date().toISOString() },
         updated_at: { timestampValue: new Date().toISOString() },
         query: { stringValue: query },
-        process: { stringValue: process },
+        process: { stringValue: processText },
         answer: { stringValue: answer },
         source_links: {
           arrayValue: {
@@ -97,8 +97,8 @@ export class SaveResultData extends OpenAPIRoute {
     };
 
     try {
-      const projectId = c.env.FIREBASE_PROJECT_ID;
-      const apiKey = c.env.FIREBASE_API_KEY;
+      const projectId = process.env.FIREBASE_PROJECT_ID;
+      const apiKey = process.env.FIREBASE_API_KEY;
       const url = `https://firestore.googleapis.com/v1/projects/${projectId}/databases/(default)/documents/answers?key=${apiKey}`;
 
       const res = await fetch(url, {
@@ -111,12 +111,12 @@ export class SaveResultData extends OpenAPIRoute {
       const resJson = (await res.json()) as { name?: string };
       const documentId = resJson?.name?.split('/').pop();
 
-      return Response.json({ success: true, id: documentId });
+      return c.json({ success: true, id: documentId });
     } catch (error) {
       console.error("Firestore save error:", error);
-      return Response.json(
+      return c.json(
         { success: false, error: "Internal server error" },
-        { status: 500 }
+        500
       );
     }
   }

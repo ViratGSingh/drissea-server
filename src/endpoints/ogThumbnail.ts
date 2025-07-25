@@ -2,7 +2,8 @@ import axios from "axios";
 import * as cheerio from "cheerio";
 import { Bool, OpenAPIRoute, Str, Num } from "chanfana";
 import { z } from "zod";
-import { type AppContext, Task } from "../types";
+import { type AppContext, Task } from "../types.js";
+import 'dotenv/config';
 
 export class OgExtract extends OpenAPIRoute {
   schema = {
@@ -66,13 +67,13 @@ export class OgExtract extends OpenAPIRoute {
 
     // Authorization check
     const authHeader = c.req.header("Authorization");
-    if (!authHeader || authHeader !== `Bearer ${c.env.API_SECRET}`) {
-      return Response.json(
+    if (!authHeader || authHeader !== `Bearer ${process.env.API_SECRET}`) {
+      return c.json(
         {
           success: false,
           error: "Unauthorized",
         },
-        { status: 401 }
+        401
       );
     }
 
@@ -95,22 +96,22 @@ export class OgExtract extends OpenAPIRoute {
       const ogUrl = $('meta[property="og:url"]').attr("content") || targetUrl;
       const durationMs = Date.now() - start;
 
-      return {
+      return c.json({
         success: true,
         ogTitle,
         ogDescription,
         ogImage,
         ogUrl,
         durationMs,
-      };
+      });
     } catch (err: any) {
-      return Response.json(
+      return c.json(
         {
           success: false,
           error: "Failed to fetch page",
           details: err.message,
         },
-        { status: 500 }
+        500
       );
     }
   }
