@@ -2,6 +2,7 @@ import { OpenAPIRoute, Str } from "chanfana";
 import { z } from "zod";
 import { type AppContext } from "../types.js";
 import 'dotenv/config';
+import admin from "firebase-admin";
 
 export class SearchData extends OpenAPIRoute {
   schema = {
@@ -87,22 +88,25 @@ export class SearchData extends OpenAPIRoute {
     const { searchId } = data.query;
 
     try {
-      const projectId = process.env.FIREBASE_PROJECT_ID;
-      const apiKey = process.env.FIREBASE_API_KEY;
-      const url = `https://firestore.googleapis.com/v1/projects/${projectId}/databases/(default)/documents/answers/${searchId}?key=${apiKey}`;
-      const res = await fetch(url);
-
-      if (!res.ok) {
-        return c.json({ error: url }, { status: 404 });
+      if (!admin.apps.length) {
+        admin.initializeApp({
+          credential:  admin.credential.cert(require("../../serviceAccountKey.json")),
+        });
       }
 
-      const json = (await res.json()) as { fields?: any };
-      const fields = json.fields;
+      const docRef = admin.firestore().collection("answers").doc(searchId);
+      const doc = await docRef.get();
 
-      const query = fields?.query?.stringValue || "";
-      const answer = fields?.answer?.stringValue || "";
-      const processText = fields?.process?.stringValue || "";
-      const sourceUrls = (fields?.source_links?.arrayValue?.values || []).map((v: any) => v.stringValue);
+      if (!doc.exists) {
+        return c.json({ error: "Document not found" }, { status: 404 });
+      }
+
+      const dataDoc = doc.data();
+
+      const query = dataDoc?.query || "";
+      const answer = dataDoc?.answer || "";
+      const processText = dataDoc?.process || "";
+      const sourceUrls = dataDoc?.source_links || [];
 
       return {
         query,
