@@ -3,6 +3,7 @@ import { z } from "zod";
 import { type AppContext } from "../types.js";
 import { Groq } from "groq-sdk";
 import 'dotenv/config';
+import admin from "firebase-admin";
 
 export class IGVideoData extends OpenAPIRoute {
   schema = {
@@ -81,8 +82,35 @@ export class IGVideoData extends OpenAPIRoute {
     const data = await this.getValidatedData<typeof this.schema>();
     const { url } = data.query;
 
+    // Extract video ID from /reel/ or /reels/ URL
+    const match = url.match(/\/reels?\/([a-zA-Z0-9_-]+)/);
+    const videoIdFromUrl = match ? match[1] : null;
+
+    if (!videoIdFromUrl) {
+      return c.json({ error: "Invalid Instagram URL or video ID not found", success: false, match:match, url:url }, { status: 400 });
+    }
+
+
+
+    //Get saved reel data
+    if (!admin.apps.length) {
+      admin.initializeApp({
+         credential:  admin.credential.cert(require("../../serviceAccountKey.json")),
+      });
+    }
+
+    const db = admin.firestore();
+    const reelsSnapshot = await db.collection("reels").where("videoId", "==", videoIdFromUrl).limit(1).get();
+
+    
+
     // Get IG reel info
     const reelUrl = url; // Assuming searchId contains the Instagram reel URL
+
+    // Get the code of video url
+    
+
+    
     const response = await fetch(`https://instagram-scraper-api2.p.rapidapi.com/v1/post_info?code_or_id_or_url=${encodeURIComponent(reelUrl)}`, {
       method: "GET",
       headers: {
@@ -110,6 +138,31 @@ export class IGVideoData extends OpenAPIRoute {
 
     if (!videoUrl) {
       return c.json({ error: "No video URL found" }, { status: 404 });
+    }
+
+    //Return saved reel data with thumbnail and video url
+    if (!reelsSnapshot.empty) {
+      const reelDoc = reelsSnapshot.docs[0].data();
+      return c.json({
+        data: {
+          "user":{
+          "id": reelDoc?.creator?.user_id??"",
+          "username": reelDoc?.creator?.username??"",
+          "fullname": reelDoc?.creator?.fullname??"",
+          "is_verified": isVerified,
+        },
+        "video":{
+          "id":videoIdFromUrl,
+          "duration":reelDoc?.duration??0,
+          "thumbnail_url":thumbnailUrl,
+          "video_url":videoUrl,
+          "caption":reelDoc?.caption??"",
+          "transcription":reelDoc?.transcript??""
+        }
+        },
+        success: true,
+        source: "firestore"
+      });
     }
 
 
