@@ -7,16 +7,16 @@ import admin from "firebase-admin";
 
 export class GetIgVideoData extends OpenAPIRoute {
   schema = {
-    tags: ["Instagram Get Video Data"],
-    summary: "Watch IG video and transcribe its audio",
+    tags: ["Instagram Get Content Data"],
+    summary: "Get IG content",
     request: {
       query: z.object({
-        url: Str({ description: "IG reel url" }),
+        url: Str({ description: "IG post/reel url" }),
       }),
     },
     responses: {
       "200": {
-        description: "Successfully retrieved video and translation",
+        description: "Successfully retrieved content",
         content: {
           "application/json": {
             schema: z.object({
@@ -99,7 +99,7 @@ export class GetIgVideoData extends OpenAPIRoute {
     }
 
     const json = (await response.json()) as { data?: any };
-    const videoUrl = json?.data?.video_versions?.[0]?.url;
+    const videoUrl = json?.data?.video_versions?.[0]?.url??"";
     const thumbnailUrl = json?.data?.thumbnail_url??"";
     const caption = json?.data?.caption?.text??"";
     const username = json?.data?.user?.username??"";
@@ -110,9 +110,9 @@ export class GetIgVideoData extends OpenAPIRoute {
     const videoId = json?.data?.code??"";
 
 
-    if (!videoUrl) {
-      return c.json({ error: "No video URL found" }, { status: 404 });
-    }
+    // if (!videoUrl) {
+    //   return c.json({ error: "No video URL found" }, { status: 404 });
+    // }
 
     
 

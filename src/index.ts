@@ -23,7 +23,7 @@ openapi.get("/api/og-extract", OgExtract);
 openapi.get("/api/search-data", SearchData);
 openapi.post("/api/save-search-data", SaveResultData);
 openapi.get("/api/instagram/extract/reel", IGVideoData);
-openapi.get("/api/instagram/get/reel", GetIgVideoData);
+openapi.get("/api/instagram/get/content", GetIgVideoData);
 openapi.get("/api/search/google", SerpData);
 openapi.post("/api/instagram/backup/data", IGSaveVideoData);
 openapi.post("/api/instagram/gen/answer", IGGenAnswer);
