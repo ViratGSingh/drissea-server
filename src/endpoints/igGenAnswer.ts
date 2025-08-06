@@ -107,7 +107,7 @@ Here’s the video content:
 ${formattedSources}`;
 
       const chatCompletion = await groq.chat.completions.create({
-        model: "openai/gpt-oss-120b",//"deepseek-r1-distill-llama-70b",
+        model: "deepseek-r1-distill-llama-70b", //"openai/gpt-oss-120b"
         messages: [
           {
             role: "system",
