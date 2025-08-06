@@ -83,7 +83,9 @@ export class IGGenAnswer extends OpenAPIRoute {
         .map((r, i) => `(${i + 1}) Content Url:\n${r.url}\nContent:${r.title} ${r.snippet}`)
         .join("\n\n");
 
-      const systemPrompt = `You are a helpful and concise assistant that answers user questions using a list of insights extracted from short videos and posts.
+      const systemPrompt = `You are Drissea, a social answer engine that watches short videos from social media to answer user queries.
+
+You are a helpful and concise assistant that answers user questions using a list of insights extracted from short videos and posts.
 
 You are given brief content summaries from multiple videos/posts. Each including a caption, video description and audio description from the respective short video
 
@@ -105,7 +107,7 @@ Here’s the video content:
 ${formattedSources}`;
 
       const chatCompletion = await groq.chat.completions.create({
-        model: "deepseek-r1-distill-llama-70b",
+        model: "openai/gpt-oss-120b",//"deepseek-r1-distill-llama-70b",
         messages: [
           {
             role: "system",
