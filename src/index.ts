@@ -8,6 +8,7 @@ import { SerpData } from "./endpoints/serpData.js";
 import { IGGenAnswer } from "./endpoints/igGenAnswer.js";
 import { SaveResultData } from "./endpoints/saveResultData.js";
 import { serve } from '@hono/node-server';
+import { GetIgVideoData } from "./endpoints/getIgVideoData.js";
 
 // Start a Hono app
 const app = new Hono<{ Bindings: Env }>();
@@ -22,6 +23,7 @@ openapi.get("/api/og-extract", OgExtract);
 openapi.get("/api/search-data", SearchData);
 openapi.post("/api/save-search-data", SaveResultData);
 openapi.get("/api/instagram/extract/reel", IGVideoData);
+openapi.get("/api/instagram/get/reel", GetIgVideoData);
 openapi.get("/api/search/google", SerpData);
 openapi.post("/api/instagram/backup/data", IGSaveVideoData);
 openapi.post("/api/instagram/gen/answer", IGGenAnswer);
