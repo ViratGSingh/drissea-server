@@ -149,27 +149,25 @@ export class GetIgSourceData extends OpenAPIRoute {
           const ogDescription =
             $('meta[property="og:description"]').attr("content") || "";
           const ogImage = $('meta[property="og:image"]').attr("content");
-          const ogUrl = $('meta[property="og:url"]').attr("content") || sourceUrl;
+          const ogUrl =
+            $('meta[property="og:url"]').attr("content") || sourceUrl;
 
           return {
-            success: true,
-            data: {
-              sourceUrl: sourceUrl,
-              user: {
-                id: "",
-                username: "",
-                fullname: "",
-                is_verified: "",
-              },
-              video: {
-                id: "",
-                duration: 0,
-                thumbnail_url: ogImage,
-                video_url: "",
-                caption: `${ogTitle} | ${ogDescription}`,
-              },
+            sourceUrl: sourceUrl,
+            user: {
+              id: "",
+              username: "",
+              fullname: "",
+              is_verified: "",
             },
-          }
+            video: {
+              id: "",
+              duration: 0,
+              thumbnail_url: ogImage,
+              video_url: "",
+              caption: `${ogTitle} | ${ogDescription}`,
+            },
+          };
         }
       })
     );
