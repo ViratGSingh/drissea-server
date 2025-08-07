@@ -4,6 +4,8 @@ import { type AppContext } from "../types.js";
 import { Groq } from "groq-sdk";
 import "dotenv/config";
 import admin from "firebase-admin";
+import axios from "axios";
+import * as cheerio from "cheerio";
 
 export class GetIgSourceData extends OpenAPIRoute {
   schema = {
@@ -88,49 +90,87 @@ export class GetIgSourceData extends OpenAPIRoute {
     const { urls } = data.body;
 
     const results = await Promise.all(
-      urls.map(async (reelUrl) => {
-        const response = await fetch(
-          `https://instagram-scraper-api2.p.rapidapi.com/v1/post_info?code_or_id_or_url=${encodeURIComponent(
-            reelUrl
-          )}`,
-          {
-            method: "GET",
+      urls.map(async (sourceUrl) => {
+        if (sourceUrl.includes("/reels/") || sourceUrl.includes("/reel/")) {
+          const response = await fetch(
+            `https://instagram-scraper-api2.p.rapidapi.com/v1/post_info?code_or_id_or_url=${encodeURIComponent(
+              sourceUrl
+            )}`,
+            {
+              method: "GET",
+              headers: {
+                "x-rapidapi-host": "instagram-scraper-api2.p.rapidapi.com",
+                "x-rapidapi-key": `${process.env.IG_RAPID_API_KEY}`,
+              },
+            }
+          );
+
+          if (!response.ok) return null;
+
+          const json = (await response.json()) as { data?: any };
+          const videoUrl = json?.data?.video_versions?.[0]?.url ?? "";
+          const thumbnailUrl = json?.data?.thumbnail_url ?? "";
+          const caption = json?.data?.caption?.text ?? "";
+          const username = json?.data?.user?.username ?? "";
+          const fullname = json?.data?.user?.full_name ?? "";
+          const userId = json?.data?.user?.id ?? "";
+          const isVerified = json?.data?.user?.is_verified ?? false;
+          const videoDuration = json?.data?.video_duration ?? 0;
+          const videoId = json?.data?.code ?? "";
+
+          return {
+            sourceUrl: sourceUrl,
+            user: {
+              id: userId,
+              username: username,
+              fullname: fullname,
+              is_verified: isVerified,
+            },
+            video: {
+              id: videoId,
+              duration: videoDuration,
+              thumbnail_url: thumbnailUrl,
+              video_url: sourceUrl.includes("/p/") ? thumbnailUrl : videoUrl,
+              caption: caption,
+            },
+          };
+        } else {
+          const response = await axios.get(sourceUrl, {
             headers: {
-              "x-rapidapi-host": "instagram-scraper-api2.p.rapidapi.com",
-              "x-rapidapi-key": `${process.env.IG_RAPID_API_KEY}`,
+              "User-Agent": "Mozilla/5.0",
+            },
+          });
+
+          const html = response.data;
+          const $ = cheerio.load(html);
+
+          const ogTitle =
+            $('meta[property="og:title"]').attr("content") || $("title").text();
+          const ogDescription =
+            $('meta[property="og:description"]').attr("content") || "";
+          const ogImage = $('meta[property="og:image"]').attr("content");
+          const ogUrl = $('meta[property="og:url"]').attr("content") || sourceUrl;
+
+          return {
+            success: true,
+            data: {
+              sourceUrl: sourceUrl,
+              user: {
+                id: "",
+                username: "",
+                fullname: "",
+                is_verified: "",
+              },
+              video: {
+                id: "",
+                duration: 0,
+                thumbnail_url: ogImage,
+                video_url: "",
+                caption: `${ogTitle} | ${ogDescription}`,
+              },
             },
           }
-        );
-
-        if (!response.ok) return null;
-
-        const json = (await response.json()) as { data?: any };
-        const videoUrl = json?.data?.video_versions?.[0]?.url ?? "";
-        const thumbnailUrl = json?.data?.thumbnail_url ?? "";
-        const caption = json?.data?.caption?.text ?? "";
-        const username = json?.data?.user?.username ?? "";
-        const fullname = json?.data?.user?.full_name ?? "";
-        const userId = json?.data?.user?.id ?? "";
-        const isVerified = json?.data?.user?.is_verified ?? false;
-        const videoDuration = json?.data?.video_duration ?? 0;
-        const videoId = json?.data?.code ?? "";
-
-        return {
-          sourceUrl:reelUrl,
-          user: {
-            id: userId,
-            username: username,
-            fullname: fullname,
-            is_verified: isVerified,
-          },
-          video: {
-            id: videoId,
-            duration: videoDuration,
-            thumbnail_url: thumbnailUrl,
-            video_url: reelUrl.includes("/p/") ? thumbnailUrl : videoUrl,
-            caption: caption,
-          },
-        };
+        }
       })
     );
 
