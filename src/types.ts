@@ -25,3 +25,23 @@ export const Task = z.object({
 	completed: z.boolean().default(false),
 	due_date: DateTime(),
 });
+
+export interface InstagramResponse {
+  source_url:string;
+  user: {
+    id: string;
+    username: string;
+    fullname: string;
+    is_verified: boolean;
+  };
+  video: {
+    id: string;
+    duration: number;
+    thumbnail_url: string;
+    video_url: string;
+    caption: string;
+  };
+}
+export interface InstagramError {
+  error: string;
+}

@@ -14,5 +14,6 @@
 			"@types/service-worker-mock"
 		]
   },
-  "exclude": ["node_modules"]
+  "exclude": ["node_modules"],
+  "include": ["src/**/*.ts", "src/**/*.d.ts"]
 }
