@@ -4,7 +4,7 @@
   "private": true,
   "scripts": {
     "dev": "tsx watch src/index.ts",
-    "build": "tsc",
+    "build": "tsc && cp -r src/scrapers dist/scrapers",
     "start": "node dist/index.js"
   },
   "dependencies": {
