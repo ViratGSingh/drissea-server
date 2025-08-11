@@ -11,6 +11,8 @@ import { serve } from '@hono/node-server';
 import { GetIgVideoData } from "./endpoints/getIgVideoData.js";
 import { GetIgSourceData } from "./endpoints/getIgSourceData.js";
 import { AltGetIgSourceData } from "./endpoints/altGetIgSourceData.js";
+import { AltSerpData } from "./endpoints/altSerpData.js";
+import { BraveSerpData } from "./endpoints/braveSerpData.js";
 
 // Start a Hono app
 const app = new Hono<{ Bindings: Env }>();
@@ -29,6 +31,8 @@ openapi.get("/api/instagram/get/content", GetIgVideoData);
 openapi.post("/api/instagram/get/source", GetIgSourceData);
 openapi.post("/api/instagram/get/source/alt", AltGetIgSourceData);
 openapi.get("/api/search/google", SerpData);
+openapi.get("/api/search/duckduckgo", AltSerpData);
+openapi.get("/api/search/brave", BraveSerpData);
 openapi.post("/api/instagram/backup/data", IGSaveVideoData);
 openapi.post("/api/instagram/gen/answer", IGGenAnswer);
 
