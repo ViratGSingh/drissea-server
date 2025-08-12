@@ -1,10 +1,13 @@
 export interface InstagramResponse {
   source_url:string;
+  score:double;
   user: {
     id: string;
     username: string;
     fullname: string;
     is_verified: boolean;
+    total_media:number;
+    total_followers:number;
   };
   video: {
     id: string;
@@ -12,6 +15,7 @@ export interface InstagramResponse {
     thumbnail_url: string;
     video_url: string;
     caption: string;
+    timestamp: number;
   };
 }
 export interface InstagramError {

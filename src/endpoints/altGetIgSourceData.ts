@@ -116,7 +116,7 @@ export class AltGetIgSourceData extends OpenAPIRoute {
       })
     );
 
-    const filteredResults = results.filter(Boolean);
+    const filteredResults = [...results].sort((a, b) => b?.score - a?.score);;
 
     return c.json({
       data: filteredResults,

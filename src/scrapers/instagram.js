@@ -44,63 +44,7 @@ async function checkRedirect(url) {
     }
     return url;
 }
-function formatPostInfo(requestData) {
-    try {
-        let mediaCapt = requestData.edge_media_to_caption.edges;
-        const capt = (mediaCapt.length === 0) ? "" : mediaCapt[0].node.text;
-        return {
-            owner_username: requestData.owner.username,
-            owner_fullname: requestData.owner.full_name,
-            is_verified: requestData.owner.is_verified,
-            is_private: requestData.owner.is_private,
-            likes: requestData.edge_media_preview_like.count,
-            is_ad: requestData.is_ad,
-            caption: capt
-        };
-    }
-    catch (err) {
-        throw new Error(`Failed to format post info: ${err.message}`);
-    }
-}
 
-function formatSourceInfo(requestData) {
-    try {
-        let mediaCapt = requestData.edge_media_to_caption.edges;
-        const capt = (mediaCapt.length === 0) ? "" : mediaCapt[0].node.text;
-        return {
-            username: requestData.owner.username,
-            fullname: requestData.owner.full_name,
-            id: requestData.owner.id,
-            is_verified: requestData.owner.is_verified,
-        };
-    }
-    catch (err) {
-        throw new Error(`Failed to format post info: ${err.message}`);
-    }
-}
-function formatMediaDetails(mediaData) {
-    try {
-        if (mediaData.is_video) {
-            return {
-                type: "video",
-                dimensions: mediaData.dimensions,
-                video_view_count: mediaData.video_view_count,
-                url: mediaData.video_url,
-                thumbnail: mediaData.display_url
-            };
-        }
-        else {
-            return {
-                type: "image",
-                dimensions: mediaData.dimensions,
-                url: mediaData.display_url
-            };
-        }
-    }
-    catch (err) {
-        throw new Error(`Failed to format media details: ${err.message}`);
-    }
-}
 function getShortcode(url) {
     try {
         let split_url = url.split("/");
@@ -143,14 +87,6 @@ async function getCSRFToken(providedToken) {
         throw new Error(`Failed to obtain CSRF: ${err.message}`);
     }
 }
-function isSidecar(requestData) {
-    try {
-        return requestData["__typename"] == "XDTGraphSidecar";
-    }
-    catch (err) {
-        throw new Error(`Failed sidecar verification: ${err.message}`);
-    }
-}
 async function instagramRequest(shortcode, retries, delay, csrfToken = undefined) {
     var _a;
     try {
@@ -165,7 +101,7 @@ async function instagramRequest(shortcode, retries, delay, csrfToken = undefined
             }),
             'doc_id': INSTAGRAM_DOCUMENT_ID
         });
-        const token = csrfToken;//await getCSRFToken(csrfToken);
+        const token = await getCSRFToken(csrfToken);
         let config = {
             method: 'post',
             maxBodyLength: Infinity,
@@ -197,10 +133,16 @@ function createOutputData(requestData) {
     try {
         let mediaCapt = requestData.edge_media_to_caption.edges;
         const capt = (mediaCapt.length === 0) ? "" : mediaCapt[0].node.text;
-        
-    
         return {
             sourceUrl: `https://instagram.com/reel/${requestData.shortcode}`,
+            score:scoreInstagramPost(
+                requestData.taken_at_timestamp,
+                requestData.video_duration,
+                requestData.owner.edge_owner_to_timeline_media.count, 
+                requestData.owner.edge_followed_by.count, 
+                requestData.video_view_count, 
+                requestData.video_play_count,
+            ),
             user:{
                 username: requestData.owner.username,
                 fullname: requestData.owner.full_name,
@@ -216,6 +158,7 @@ function createOutputData(requestData) {
                 video_url: requestData.video_url,
                 views: requestData.video_view_count,
                 plays: requestData.video_play_count,
+                timestamp:requestData.taken_at_timestamp,
                 caption: capt,
             }
         };
@@ -223,4 +166,77 @@ function createOutputData(requestData) {
     catch (err) {
         throw new Error(`Failed to create output data: ${err.message}`);
     }
+
+    
 }
+
+
+//Function to score video
+function clamp(value, min = 0, max = 1) {
+  return Math.min(Math.max(value, min), max);
+}
+
+/**
+ * Calculates a score out of 10 for an Instagram post based on various metrics.
+ * @param {number} timestamp - The timestamp of the video post in milliseconds since epoch.
+ * @param {number} duration - The duration of the video in seconds.
+ * @param {number} total_media - The total number of media posts by the user.
+ * @param {number} total_followers - The total number of followers of the user.
+ * @param {number} views - The number of views the post/video has.
+ * @param {number} plays - The number of plays the post/video has.
+ * @returns {number} Score between 0 and 10 (rounded to 2 decimals)
+ */
+ function scoreInstagramPost(timestamp, duration, total_media, total_followers, views, plays) {
+    try {
+    // Ensure duration is a number and default to 0 if invalid
+    duration = Number(duration) || 0;
+
+    const maxVals = {
+      maxViews: 50000000,
+      maxDuration: 180,
+      maxTotalPosts: 1000,
+      maxFollowers: 50000000,
+      maxAgeHours: 168,
+      maxPlays: 50000000
+    };
+
+    const now = Date.now();
+    const createdAtTime = new Date(timestamp).getTime();
+    const ageHours = (now - createdAtTime) / (1000 * 60 * 60);
+
+    // Normalize metrics
+    const normAge = clamp(1 - ageHours / maxVals.maxAgeHours); // more recent is better
+    const normViews = clamp(views / maxVals.maxViews);
+    const normDuration = clamp(duration / maxVals.maxDuration);
+    const normPlays = clamp(plays / maxVals.maxPlays);
+    const normTotalPosts = clamp(total_media / maxVals.maxTotalPosts);
+    const normFollowers = clamp(
+      Math.log10(total_followers + 1) / Math.log10(maxVals.maxFollowers + 1)
+    );
+
+    // Weights
+    const weights = {
+      age: 0.25,
+      views: 0.20,
+      duration: 0.15,
+      plays: 0.15,
+      totalPosts: 0.10,
+      followers: 0.15,
+    };
+
+    const score =
+      normAge * weights.age +
+      normViews * weights.views +
+      normDuration * weights.duration +
+      normPlays * weights.plays +
+      normTotalPosts * weights.totalPosts +
+      normFollowers * weights.followers;
+
+    return Math.round(score * 10 * 100) / 100;
+  } catch (error) {
+    console.error("Error calculating Instagram post score:", error);
+    return 0;
+  }
+}
+
+
