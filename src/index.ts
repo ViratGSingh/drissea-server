@@ -13,6 +13,7 @@ import { GetIgSourceData } from "./endpoints/getIgSourceData.js";
 import { AltGetIgSourceData } from "./endpoints/altGetIgSourceData.js";
 import { AltSerpData } from "./endpoints/altSerpData.js";
 import { BraveSerpData } from "./endpoints/braveSerpData.js";
+import { ExtractIGVideoData } from "./endpoints/extractIgContentData.js";
 
 // Start a Hono app
 const app = new Hono<{ Bindings: Env }>();
@@ -28,6 +29,7 @@ openapi.get("/api/search-data", SearchData);
 openapi.post("/api/save-search-data", SaveResultData);
 openapi.get("/api/instagram/extract/reel", IGVideoData);
 openapi.get("/api/instagram/get/content", GetIgVideoData);
+openapi.post("/api/instagram/extract/content", ExtractIGVideoData);
 openapi.post("/api/instagram/get/source", GetIgSourceData);
 openapi.post("/api/instagram/get/source/alt", AltGetIgSourceData);
 openapi.get("/api/search/google", SerpData);

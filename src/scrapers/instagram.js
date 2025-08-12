@@ -135,14 +135,15 @@ function createOutputData(requestData) {
         const capt = (mediaCapt.length === 0) ? "" : mediaCapt[0].node.text;
         return {
             sourceUrl: `https://instagram.com/reel/${requestData.shortcode}`,
-            score:scoreInstagramPost(
-                requestData.taken_at_timestamp,
-                requestData.video_duration,
-                requestData.owner.edge_owner_to_timeline_media.count, 
-                requestData.owner.edge_followed_by.count, 
-                requestData.video_view_count, 
-                requestData.video_play_count,
-            ),
+            // score:scoreInstagramPost(
+            //     requestData.taken_at_timestamp,
+            //     requestData.video_duration,
+            //     requestData.owner.edge_owner_to_timeline_media.count, 
+            //     requestData.owner.edge_followed_by.count, 
+            //     requestData.video_view_count, 
+            //     requestData.video_play_count,
+            // ),
+            has_audio: requestData.has_audio,
             user:{
                 username: requestData.owner.username,
                 fullname: requestData.owner.full_name,

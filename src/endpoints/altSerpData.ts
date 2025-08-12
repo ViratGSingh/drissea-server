@@ -16,14 +16,15 @@ export class AltSerpData extends OpenAPIRoute {
     summary: "Get instagram source links from google",
     request: {
       query: z.object({
-        query: Str({
-          description: "Search query to fetch video links via DuckDuckGo",
+        queries: Str({
+          description: "Search queries to fetch video links via DuckDuckGo",
         }),
         domain: Str({
           description: "Domain to fetch video links via DuckDuckGo",
         }),
         total_results: z.number().describe("Total number of results required"),
         prev_results: z.number().describe("Number of previous results to skip"),
+        date_range: z.string().optional().describe("Date range of results"),
         // vqd: z.string().optional().describe("Optional vqd parameter"),
         // dp: z.string().optional().describe("Optional dp parameter"),
       }),
@@ -95,7 +96,7 @@ export class AltSerpData extends OpenAPIRoute {
       );
     }
     const data = await this.getValidatedData<typeof this.schema>();
-    const { query, total_results, prev_results, domain } = data.query;
+    const { queries, domain, date_range} = data.query;
 
     try {
       const userAgent =
@@ -107,63 +108,40 @@ export class AltSerpData extends OpenAPIRoute {
 
       const proxyUrl = `http://${proxy_user}:${proxy_passwd}@${proxy_host}:${proxy_port}`;
       const httpsAgent = new HttpsProxyAgent(proxyUrl);
-      const duckUrl = `https://duckduckgo.com/?q=${encodeURIComponent(
-        `${query} site:${domain}.com`
-      )}`;
 
-      const res = await axios.get(duckUrl, {
-        httpsAgent,
-        headers: {
-          "User-Agent": userAgent,
-        },
-      });
-      const html = res.data;
-      let jsonData;
-      const editableParams: Record<string, string> = {};
-      // Extract the first <script type="text/javascript">...</script> containing DDG.deep.initialize
-      const scriptRegex =
-        /<script[^>]*type=["']text\/javascript["'][^>]*>([\s\S]*?DDG\.deep\.initialize[\s\S]*?)<\/script>/i;
-      const scriptMatch = html.match(scriptRegex);
-      if (scriptMatch) {
-        // Find DDG.deep.initialize('...')
-        const ddgInitRegex = /DDG\.deep\.initialize\s*\(\s*(['"])(.*?)\1/;
-        const ddgMatch = scriptMatch[1].match(ddgInitRegex);
-        if (ddgMatch) {
-          // Extract and log editable query parameters from ddgMatch[2]
-          const queryString = `https://links.duckduckgo.com/${ddgMatch[2]}`;
-          const urlParams = new URLSearchParams(queryString);
+      const allQueries = queries.split(",").map(q => q.trim()).filter(q => q);
+      const queryResults: Record<string, any[]> = {};
 
-          urlParams.forEach((value, key) => {
-            editableParams[key] = value;
-          });
-          editableParams["prev_s"] = String(data.query.prev_results);
-          editableParams["s"] = String(data.query.total_results);
-
-          const vqd = editableParams["vqd"];
-          const editedQueryString = `https://duckduckgo.com/v.js?q=${query} site:${domain}.com&o=json&l=us-en&vqd=${vqd || ""}&p=-1&sr=1`;
-
-          //Make query to this with https://links.duckduckgo.com/
-          const fetchResponse = await axios.get(editedQueryString, {
-            //httpsAgent,
-            headers: {
-              "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64)",
-            },
-          });
-          console.log(fetchResponse.data);
-          jsonData = fetchResponse.data;
-        } else {
-          console.error("❌ Could not find DDG.deep.initialize argument.");
+      await Promise.all(allQueries.map(async (searchQuery) => {
+        const duckUrl = `https://duckduckgo.com/?q=${encodeURIComponent(`${searchQuery} site:${domain}.com`)}`;
+        const res = await axios.get(duckUrl, { httpsAgent, headers: { "User-Agent": userAgent } });
+        const html = res.data;
+        const editableParams: Record<string, string> = {};
+        const scriptRegex = /<script[^>]*type=["']text\/javascript["'][^>]*>([\s\S]*?DDG\.deep\.initialize[\s\S]*?)<\/script>/i;
+        const scriptMatch = html.match(scriptRegex);
+        if (scriptMatch) {
+          const ddgInitRegex = /DDG\.deep\.initialize\s*\(\s*(['"])(.*?)\1/;
+          const ddgMatch = scriptMatch[1].match(ddgInitRegex);
+          if (ddgMatch) {
+            const queryString = `https://links.duckduckgo.com/${ddgMatch[2]}`;
+            const urlParams = new URLSearchParams(queryString);
+            urlParams.forEach((value, key) => {
+              editableParams[key] = value;
+            });
+            const vqd = editableParams["vqd"];
+            const filterParam = date_range ? `&f=publishedAfter:${date_range}` : "";
+            const editedQueryString = `https://duckduckgo.com/v.js?q=${searchQuery} site:${domain}.com&o=json&l=us-en&vqd=${vqd || ""}&p=-1&sr=1${filterParam}`;
+            const fetchResponse = await axios.get(editedQueryString, { headers: { "User-Agent": userAgent } });
+            const resultsData = fetchResponse.data?.results || [];
+            queryResults[searchQuery] = resultsData;
+          }
         }
-      } else {
-        console.error(
-          '❌ Could not find <script type="text/javascript"> containing DDG.deep.initialize.'
-        );
-      }
-
+      }));
 
       return {
-        query,
-        "results":jsonData["results"]??[],
+        queries: allQueries,
+        results: queryResults,
+        total: Object.values(queryResults).reduce((sum, arr) => sum + arr.length, 0),
         success: true,
       };
     } catch (error: any) {

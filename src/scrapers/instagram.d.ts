@@ -1,6 +1,7 @@
 export interface InstagramResponse {
   source_url:string;
   score:double;
+  has_audio: boolean,
   user: {
     id: string;
     username: string;
