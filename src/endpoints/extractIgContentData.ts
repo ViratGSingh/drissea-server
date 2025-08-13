@@ -173,7 +173,7 @@ export class ExtractIGVideoData extends OpenAPIRoute {
             },
           };
 
-          firestore
+          await firestore
               .collection("short-videos")
               .doc(videoId)
               .set({
@@ -214,7 +214,7 @@ export class ExtractIGVideoData extends OpenAPIRoute {
               framewatch: framewatchText,
             },
           };
-          firestore
+          await firestore
               .collection("short-videos")
               .doc(videoId)
               .set({
