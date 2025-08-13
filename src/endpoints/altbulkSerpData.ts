@@ -10,20 +10,20 @@ interface SerpApiResponse {
   // Add other fields if needed, like `inline_videos?: { link: string }[]`
 }
 
-export class AltSerpData extends OpenAPIRoute {
+export class AltBulkSerpData extends OpenAPIRoute {
   schema = {
     tags: ["Serp Search"],
     summary: "Get instagram source links from google",
     request: {
       query: z.object({
-        query: Str({
-          description: "Search query to fetch video links via DuckDuckGo",
+        queries: Str({
+          description: "Search queries to fetch video links via DuckDuckGo",
         }),
         domain: Str({
           description: "Domain to fetch video links via DuckDuckGo",
         }),
-        // total_results: z.number().describe("Total number of results required"),
-        // prev_results: z.number().describe("Number of previous results to skip"),
+        total_results: z.number().describe("Total number of results required"),
+        prev_results: z.number().describe("Number of previous results to skip"),
         date_range: z.string().optional().describe("Date range of results"),
         // vqd: z.string().optional().describe("Optional vqd parameter"),
         // dp: z.string().optional().describe("Optional dp parameter"),
@@ -96,7 +96,7 @@ export class AltSerpData extends OpenAPIRoute {
       );
     }
     const data = await this.getValidatedData<typeof this.schema>();
-    const { query, domain, date_range} = data.query;
+    const { queries, domain, date_range} = data.query;
 
     try {
       const userAgent =
@@ -109,33 +109,39 @@ export class AltSerpData extends OpenAPIRoute {
       const proxyUrl = `http://${proxy_user}:${proxy_passwd}@${proxy_host}:${proxy_port}`;
       const httpsAgent = new HttpsProxyAgent(proxyUrl);
 
-      const duckUrl = `https://duckduckgo.com/?q=${encodeURIComponent(`${query} site:${domain}.com`)}`;
-      const res = await axios.get(duckUrl, { httpsAgent, headers: { "User-Agent": userAgent } });
-      const html = res.data;
-      const editableParams: Record<string, string> = {};
-      const scriptRegex = /<script[^>]*type=["']text\/javascript["'][^>]*>([\s\S]*?DDG\.deep\.initialize[\s\S]*?)<\/script>/i;
-      const scriptMatch = html.match(scriptRegex);
-      let resultsData: any[] = [];
-      if (scriptMatch) {
-        const ddgInitRegex = /DDG\.deep\.initialize\s*\(\s*(['"])(.*?)\1/;
-        const ddgMatch = scriptMatch[1].match(ddgInitRegex);
-        if (ddgMatch) {
-          const queryString = `https://links.duckduckgo.com/${ddgMatch[2]}`;
-          const urlParams = new URLSearchParams(queryString);
-          urlParams.forEach((value, key) => {
-            editableParams[key] = value;
-          });
-          const vqd = editableParams["vqd"];
-          const filterParam = date_range ? `&f=publishedAfter:${date_range}` : "";
-          const editedQueryString = `https://duckduckgo.com/v.js?q=${query} site:${domain}.com&o=json&l=us-en&vqd=${vqd || ""}&p=-1&sr=1${filterParam}`;
-          const fetchResponse = await axios.get(editedQueryString, { headers: { "User-Agent": userAgent } });
-          resultsData = fetchResponse.data?.results || [];
+      const allQueries = queries.split(",").map(q => q.trim()).filter(q => q);
+      const queryResults: Record<string, any[]> = {};
+
+      await Promise.all(allQueries.map(async (searchQuery) => {
+        const duckUrl = `https://duckduckgo.com/?q=${encodeURIComponent(`${searchQuery} site:${domain}.com`)}`;
+        const res = await axios.get(duckUrl, { httpsAgent, headers: { "User-Agent": userAgent } });
+        const html = res.data;
+        const editableParams: Record<string, string> = {};
+        const scriptRegex = /<script[^>]*type=["']text\/javascript["'][^>]*>([\s\S]*?DDG\.deep\.initialize[\s\S]*?)<\/script>/i;
+        const scriptMatch = html.match(scriptRegex);
+        if (scriptMatch) {
+          const ddgInitRegex = /DDG\.deep\.initialize\s*\(\s*(['"])(.*?)\1/;
+          const ddgMatch = scriptMatch[1].match(ddgInitRegex);
+          if (ddgMatch) {
+            const queryString = `https://links.duckduckgo.com/${ddgMatch[2]}`;
+            const urlParams = new URLSearchParams(queryString);
+            urlParams.forEach((value, key) => {
+              editableParams[key] = value;
+            });
+            const vqd = editableParams["vqd"];
+            const filterParam = date_range ? `&f=publishedAfter:${date_range}` : "";
+            const editedQueryString = `https://duckduckgo.com/v.js?q=${searchQuery} site:${domain}.com&o=json&l=us-en&vqd=${vqd || ""}&p=-1&sr=1${filterParam}`;
+            const fetchResponse = await axios.get(editedQueryString, { headers: { "User-Agent": userAgent } });
+            const resultsData = fetchResponse.data?.results || [];
+            queryResults[searchQuery] = resultsData;
+          }
         }
-      }
+      }));
 
       return {
-        query,
-        results: resultsData,
+        queries: allQueries,
+        results: queryResults,
+        total: Object.values(queryResults).reduce((sum, arr) => sum + arr.length, 0),
         success: true,
       };
     } catch (error: any) {
