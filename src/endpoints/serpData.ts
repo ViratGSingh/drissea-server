@@ -4,7 +4,7 @@ import { type AppContext } from "../types.js";
 import 'dotenv/config';
 
 interface SerpApiResponse {
-  organic?: { link: string }[];
+  videos?: { link: string }[];
   // Add other fields if needed, like `inline_videos?: { link: string }[]`
 }
 
@@ -87,7 +87,7 @@ export class SerpData extends OpenAPIRoute {
     const data = await this.getValidatedData<typeof this.schema>();
     const { query } = data.query;
 
-    const serpUrl = "https://google.serper.dev/search";
+    const serpUrl = "https://google.serper.dev/videos";
 
     try {
       const res = await fetch(serpUrl, {
@@ -106,7 +106,7 @@ export class SerpData extends OpenAPIRoute {
       });
       const json = (await res.json()) as SerpApiResponse;
 
-      const links = (json?.organic || []).map((item: any) => item.link);
+      const links = (json?.videos || []).map((item: any) => item.link);
 
       return {
         query,

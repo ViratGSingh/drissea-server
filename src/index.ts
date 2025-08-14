@@ -15,6 +15,7 @@ import { AltBulkSerpData } from "./endpoints/altbulkSerpData.js";
 import { BraveSerpData } from "./endpoints/braveSerpData.js";
 import { ExtractIGVideoData } from "./endpoints/extractIgContentData.js";
 import { AltSerpData } from "./endpoints/altSerpData.js";
+import { GenIGSearchQuery } from "./endpoints/genSearchQuery.js";
 
 // Start a Hono app
 const app = new Hono<{ Bindings: Env }>();
@@ -25,20 +26,27 @@ const openapi = fromHono(app, {
 });
 
 // Register OpenAPI endpoints
-openapi.get("/api/og-extract", OgExtract);
+
+//Search APIs
+openapi.get("/api/search/google", SerpData);
+openapi.get("/api/bulk/search/duckduckgo", AltBulkSerpData);
+openapi.get("/api/search/duckduckgo", AltSerpData);
+openapi.get("/api/search/brave", BraveSerpData);
 openapi.get("/api/search-data", SearchData);
 openapi.post("/api/save-search-data", SaveResultData);
+openapi.post("/api/search/gen/query", GenIGSearchQuery);
+
+//Instagram APIs
 openapi.get("/api/instagram/extract/reel", IGVideoData);
 openapi.get("/api/instagram/get/content", GetIgVideoData);
 openapi.post("/api/instagram/extract/content", ExtractIGVideoData);
 openapi.post("/api/instagram/get/source", GetIgSourceData);
 openapi.post("/api/instagram/get/source/alt", AltGetIgSourceData);
-openapi.get("/api/search/google", SerpData);
-openapi.get("/api/bulk/search/duckduckgo", AltBulkSerpData);
-openapi.get("/api/search/duckduckgo", AltSerpData);
-openapi.get("/api/search/brave", BraveSerpData);
 openapi.post("/api/instagram/backup/data", IGSaveVideoData);
 openapi.post("/api/instagram/gen/answer", IGGenAnswer);
+
+//Other APIs
+openapi.get("/api/og-extract", OgExtract);
 
 // You may also register routes for non OpenAPI directly on Hono
 // app.get('/test', (c) => c.text('Hono!'))
