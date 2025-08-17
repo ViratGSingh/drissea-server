@@ -107,10 +107,12 @@ export class SerpData extends OpenAPIRoute {
       const json = (await res.json()) as SerpApiResponse;
 
       const links = (json?.videos || []).map((item: any) => item.link);
+      const thumbnailLinks = (json?.videos || []).map((item: any) => item.imageUrl);
 
       return {
         query,
         source_links: links,
+        thumbnail_links: thumbnailLinks,
         success: true,
       };
     } catch (error: any) {
