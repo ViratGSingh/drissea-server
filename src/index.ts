@@ -18,6 +18,8 @@ import { AltSerpData } from "./endpoints/altSerpData.js";
 import { GenIGSearchQuery } from "./endpoints/genSearchQuery.js";
 import { CreateSessionData } from "./endpoints/createSessionData.js";
 import { UpdateSessionData } from "./endpoints/updateSessionData.js";
+import { GetSessionData } from "./endpoints/getSessionData.js";
+import { GetCacheData } from "./endpoints/getCacheData.js";
 
 // Start a Hono app
 const app = new Hono<{ Bindings: Env }>();
@@ -42,6 +44,7 @@ openapi.post("/api/search/gen/query", GenIGSearchQuery);
 openapi.get("/api/instagram/extract/reel", IGVideoData);
 openapi.get("/api/instagram/get/content", GetIgVideoData);
 openapi.post("/api/instagram/extract/content", ExtractIGVideoData);
+openapi.post("/api/instagram/cache/content", GetCacheData);
 openapi.post("/api/instagram/get/source", GetIgSourceData);
 openapi.post("/api/instagram/get/source/alt", AltGetIgSourceData);
 openapi.post("/api/instagram/backup/data", IGSaveVideoData);
@@ -50,6 +53,7 @@ openapi.post("/api/instagram/gen/answer", IGGenAnswer);
 //Session APIs
 openapi.post("/api/session/create", CreateSessionData);
 openapi.post("/api/session/update", UpdateSessionData);
+openapi.get("/api/session/get", GetSessionData);
 
 //Other APIs
 openapi.get("/api/og-extract", OgExtract);

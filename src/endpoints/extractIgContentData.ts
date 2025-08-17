@@ -174,6 +174,87 @@ export class ExtractIGVideoData extends OpenAPIRoute {
           };
 
           await firestore
+            .collection("short-videos")
+            .doc(videoId)
+            .set({
+              sourceUrl: video?.sourceUrl ?? "",
+              hasAudio: video?.has_audio ?? false,
+              username: video?.user?.username ?? "",
+              fullname: video?.user?.fullname ?? "",
+              userId: video?.user?.id ?? "",
+              isVerified: video?.user?.is_verified ?? false,
+              totalMedia: video?.user?.total_media ?? 0,
+              totalFollowers: video?.user?.total_followers ?? 0,
+              videoId: video?.video?.id ?? "",
+              duration: video?.video?.duration ?? 0,
+              thumbnailUrl: video?.video?.thumbnail_url ?? "",
+              videoUrl: video?.video?.video_url ?? "",
+              views: video?.video?.views ?? 0,
+              plays: video?.video?.plays ?? 0,
+              timestamp: video?.video?.timestamp ?? 0,
+              caption: video?.video?.caption ?? 0,
+              framewatch: framewatchText,
+              transcription: "",
+              createdAt: new Date().toISOString(),
+              updatedAt: new Date().toISOString(),
+            });
+
+          return resultVideo;
+        }
+        try {
+          const transcriptResponse = await groq.audio.translations.create({
+            url: video.video.video_url,
+            model: "whisper-large-v3",
+            response_format: "json",
+            temperature: 0.0,
+          });
+          const resultVideo = {
+            ...video,
+            video: {
+              ...video.video,
+              transcription: transcriptResponse.text,
+              framewatch: framewatchText,
+            },
+          };
+          await firestore
+            .collection("short-videos")
+            .doc(videoId)
+            .set({
+              sourceUrl: video?.sourceUrl ?? "",
+              hasAudio: video?.has_audio ?? false,
+              username: video?.user?.username ?? "",
+              fullname: video?.user?.fullname ?? "",
+              userId: video?.user?.id ?? "",
+              isVerified: video?.user?.is_verified ?? false,
+              totalMedia: video?.user?.total_media ?? 0,
+              totalFollowers: video?.user?.total_followers ?? 0,
+              videoId: video?.video?.id ?? "",
+              duration: video?.video?.duration ?? 0,
+              thumbnailUrl: video?.video?.thumbnail_url ?? "",
+              videoUrl: video?.video?.video_url ?? "",
+              views: video?.video?.views ?? 0,
+              plays: video?.video?.plays ?? 0,
+              timestamp: video?.video?.timestamp ?? 0,
+              caption: video?.video?.caption ?? 0,
+              framewatch: framewatchText,
+              transcription: transcriptResponse.text,
+              createdAt: new Date().toISOString(),
+              updatedAt: new Date().toISOString(),
+            });
+
+          return resultVideo;
+        } catch (error) {
+          // On error, return the video with transcription null and maybe an error message
+          const resultVideo = {
+            ...video,
+            video: {
+              ...video.video,
+              transcription: "",
+              framewatch: framewatchText,
+            },
+          };
+          if (videoId) {
+            await firestore
               .collection("short-videos")
               .doc(videoId)
               .set({
@@ -195,66 +276,9 @@ export class ExtractIGVideoData extends OpenAPIRoute {
                 caption: video?.video?.caption ?? 0,
                 framewatch: framewatchText,
                 transcription: "",
+                createdAt: new Date().toISOString(),
+                updatedAt: new Date().toISOString(),
               });
-          
-          return resultVideo;
-        }
-        try {
-          const transcriptResponse = await groq.audio.translations.create({
-            url: video.video.video_url,
-            model: "whisper-large-v3",
-            response_format: "json",
-            temperature: 0.0,
-          });
-          const resultVideo = {
-            ...video,
-            video: {
-              ...video.video,
-              transcription: transcriptResponse.text,
-              framewatch: framewatchText,
-            },
-          };
-          await firestore
-              .collection("short-videos")
-              .doc(videoId)
-              .set({
-                sourceUrl: video?.sourceUrl ?? "",
-                hasAudio: video?.has_audio ?? false,
-                username: video?.user?.username ?? "",
-                fullname: video?.user?.fullname ?? "",
-                userId: video?.user?.id ?? "",
-                isVerified: video?.user?.is_verified ?? false,
-                totalMedia: video?.user?.total_media ?? 0,
-                totalFollowers: video?.user?.total_followers ?? 0,
-                videoId: video?.video?.id ?? "",
-                duration: video?.video?.duration ?? 0,
-                thumbnailUrl: video?.video?.thumbnail_url ?? "",
-                videoUrl: video?.video?.video_url ?? "",
-                views: video?.video?.views ?? 0,
-                plays: video?.video?.plays ?? 0,
-                timestamp: video?.video?.timestamp ?? 0,
-                caption: video?.video?.caption ?? 0,
-                framewatch: framewatchText,
-                transcription: transcriptResponse.text,
-              });
-          
-          return resultVideo;
-        } catch (error) {
-          // On error, return the video with transcription null and maybe an error message
-          const resultVideo = {
-            ...video,
-            video: {
-              ...video.video,
-              transcription: "",
-              framewatch: framewatchText,
-            },
-          };
-          if (videoId) {
-            await firestore.collection("short-videos").doc(videoId).set({
-              framewatch: framewatchText,
-              transcription: "",
-              metadata: video.video,
-            });
           }
           return resultVideo;
         }
