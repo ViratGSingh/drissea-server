@@ -14,7 +14,8 @@ export class UpdateSessionData extends OpenAPIRoute {
           "application/json": {
             schema: z.object({
               sessionId: z.string(),
-              videos: z.array(z.record(z.any())),
+              sourceUrls: z.array(z.string()),
+              videos: z.array(z.string()),
               questions: z.array(z.string()),
               searchTerms: z.array(z.string()),
               answers: z.array(z.string()),

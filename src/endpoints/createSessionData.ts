@@ -14,7 +14,8 @@ export class CreateSessionData extends OpenAPIRoute {
         content: {
           "application/json": {
             schema: z.object({
-              videos: z.array(z.record(z.any())),
+              sourceUrls: z.array(z.string()),
+              videos: z.array(z.string()),
               questions: z.array(z.string()),
               searchTerms: z.array(z.string()),
               answers: z.array(z.string()),
