@@ -1,5 +1,6 @@
 import axios from "axios";
 import * as cheerio from "cheerio";
+import {HttpsProxyAgent} from "https-proxy-agent";
 import { Bool, OpenAPIRoute, Str, Num } from "chanfana";
 import { z } from "zod";
 import { type AppContext, Task } from "../types.js";
@@ -63,6 +64,18 @@ export class OgExtract extends OpenAPIRoute {
   };
 
   async handle(c: AppContext) {
+
+    const {HttpsProxyAgent} = require('https-proxy-agent');
+    
+    //Bright Data Access
+    const proxy_user = process.env.OXY_USERNAME;
+    const proxy_host = process.env.OXY_HOST;
+    const proxy_port = parseInt(process.env.OXY_PORT ?? "0", 10);
+    const proxy_passwd = process.env.OXY_PASSWORD;
+    
+    const proxyUrl = `http://${proxy_user}:${proxy_passwd}@${proxy_host}:${proxy_port}`;
+    const httpsAgent = new HttpsProxyAgent(proxyUrl);
+
     const data = await this.getValidatedData<typeof this.schema>();
 
     // Authorization check
@@ -81,11 +94,13 @@ export class OgExtract extends OpenAPIRoute {
     const start = Date.now();
 
     try {
-      const response = await axios.get(targetUrl, {
-        headers: {
-          "User-Agent": "Mozilla/5.0",
-        },
-      });
+
+    let config = {
+            method: 'GET',
+            url: targetUrl,
+            httpsAgent: httpsAgent
+        };
+      const response = await axios(config);
 
       const html = response.data;
       const $ = cheerio.load(html);
