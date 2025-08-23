@@ -20,6 +20,9 @@ import { CreateSessionData } from "./endpoints/createSessionData.js";
 import { UpdateSessionData } from "./endpoints/updateSessionData.js";
 import { GetSessionData } from "./endpoints/getSessionData.js";
 import { GetCacheData } from "./endpoints/getCacheData.js";
+import { CreateUserData } from "./endpoints/createUserData.js";
+import { UpdateUserData } from "./endpoints/updateUserData.js";
+import { GetUserData } from "./endpoints/getUserData.js";
 
 // Start a Hono app
 const app = new Hono<{ Bindings: Env }>();
@@ -54,6 +57,11 @@ openapi.post("/api/instagram/gen/answer", IGGenAnswer);
 openapi.post("/api/session/create", CreateSessionData);
 openapi.post("/api/session/update", UpdateSessionData);
 openapi.get("/api/session/get", GetSessionData);
+
+//User APIs
+openapi.post("/api/user/create", CreateUserData);
+openapi.post("/api/user/update", UpdateUserData);
+openapi.get("/api/user/get", GetUserData);
 
 //Other APIs
 openapi.get("/api/og-extract", OgExtract);
