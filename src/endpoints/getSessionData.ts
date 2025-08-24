@@ -22,6 +22,7 @@ export class GetSessionData extends OpenAPIRoute {
               success: z.literal(true),
               session: z.object({
                 sessionId: z.string(),
+                email: z.string(),
                 sourceUrls: z.array(z.string()),
                 videos: z.array(z.string()),
                 questions: z.array(z.string()),
@@ -84,6 +85,7 @@ export class GetSessionData extends OpenAPIRoute {
       // Compose the session object with all expected fields
       const session = {
         sessionId: doc.id,
+        email: sessionData?.email??"",
         sourceUrls: sessionData?.sourceUrls ?? [],
         videos: sessionData?.videos ?? [],
         questions: sessionData?.questions ?? [],
