@@ -23,6 +23,7 @@ import { GetCacheData } from "./endpoints/getCacheData.js";
 import { CreateUserData } from "./endpoints/createUserData.js";
 import { UpdateUserData } from "./endpoints/updateUserData.js";
 import { GetUserData } from "./endpoints/getUserData.js";
+import { GetRecallData } from "./endpoints/getRecallData.js";
 
 // Start a Hono app
 const app = new Hono<{ Bindings: Env }>();
@@ -57,6 +58,9 @@ openapi.post("/api/instagram/gen/answer", IGGenAnswer);
 openapi.post("/api/session/create", CreateSessionData);
 openapi.post("/api/session/update", UpdateSessionData);
 openapi.get("/api/session/get", GetSessionData);
+
+//Recall APIs
+openapi.post("/api/recall/videos", GetRecallData);
 
 //User APIs
 openapi.post("/api/user/create", CreateUserData);
