@@ -32,6 +32,7 @@ export class GetSessionData extends OpenAPIRoute {
                 searchDuration: z.number(),
                 fetchDuration: z.number(),
                 extractDuration: z.number(),
+                contentDuration: z.number(),
                 createdAt: z.string(),
                 updatedAt: z.string(),
               }),
@@ -95,6 +96,7 @@ export class GetSessionData extends OpenAPIRoute {
         searchDuration: sessionData?.searchDuration ?? 0,
         fetchDuration: sessionData?.fetchDuration ?? 0,
         extractDuration: sessionData?.extractDuration ?? 0,
+        contentDuration: sessionData?.contentDuration ?? 0,
         createdAt: sessionData?.createdAt ?? "",
         updatedAt: sessionData?.updatedAt ?? "",
       };

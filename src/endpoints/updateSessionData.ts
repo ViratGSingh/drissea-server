@@ -24,6 +24,7 @@ export class UpdateSessionData extends OpenAPIRoute {
               fetchDuration: z.number(),
               email:z.string(),
               extractDuration: z.number(),
+              contentDuration: z.number(),
             }),
           },
         },
