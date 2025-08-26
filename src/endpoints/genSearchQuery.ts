@@ -95,12 +95,11 @@ export class GenIGSearchQuery extends OpenAPIRoute {
 
     try {
       const chatCompletion = await groq.chat.completions.create({
-        model: "llama-3.1-8b-instant",
+        model: "llama-3.3-70b-versatile",
         messages: [
           {
             role: "system",
-            content:
-              "You are an Instagram video search query generator.\n\nYour job: rewrite the user's request into ONE short, high-impact search query that captures the main subject.\n\nRules:\n- Be like a top Google searcher.\n- Remove unnecessary details, adjectives, and filler words.\n- Avoid any mention of content medium (like reels, videos, posts).\n- Output only the query text, nothing else.\n",
+            content:"You are an Instagram video search query generator.\n\nYour job: rewrite the user's request into ONE short, high-impact search query that captures the main subject.\n\nRules: \nBe like a top Google searcher.\nRemove unnecessary details, adjectives, and filler words.\nAvoid any mention of content medium (like reels, videos, posts).\nOutput only the query text, nothing else.",
           },
           {
             role: "user",
