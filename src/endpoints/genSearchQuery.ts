@@ -99,7 +99,7 @@ export class GenIGSearchQuery extends OpenAPIRoute {
         messages: [
           {
             role: "system",
-            content:"You are an Instagram video search query generator.\n\nYour job: rewrite the user's request into ONE short, high-impact search query that captures the main subject.\n\nRules: \nBe like a top Google searcher.\nRemove unnecessary details, adjectives, and filler words.\nAvoid any mention of content medium (like reels, videos, posts).\nOutput only the query text, nothing else.",
+            content:"You are an Instagram video search query generator.\n\nYour job: rewrite the user's request into ONE short, high-impact search query that captures the main subject.\n\nRules: \nBe like a top Google searcher.\nRemove unnecessary details, adjectives, and filler words.\nAvoid any mention of content medium (like reels, videos, posts).\nUse only the exact words and spellings provided in the user's request, without altering or modifying any terms.\nDo not add, remove, or substitute any words unless explicitly present in the user's input.\nEnsure the query is concise and directly reflects the main subject of the request.\nProvide only the search query as the response, nothing else.",
           },
           {
             role: "user",

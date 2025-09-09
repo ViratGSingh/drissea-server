@@ -26,6 +26,7 @@ import { GetUserData } from "./endpoints/getUserData.js";
 import { GetRecallData } from "./endpoints/getRecallData.js";
 import { CreateRecallData } from "./endpoints/createRecallData.js";
 import { UpdateRecallData } from "./endpoints/updateRecallData.js";
+import { GetSessionRecallData } from "./endpoints/getSessionRecallData.js";
 
 // Start a Hono app
 const app = new Hono<{ Bindings: Env }>();
@@ -65,6 +66,7 @@ openapi.get("/api/session/get", GetSessionData);
 openapi.post("/api/recall/videos", GetRecallData);
 openapi.post("/api/recall/create", CreateRecallData);
 openapi.post("/api/recall/update", UpdateRecallData);
+openapi.get("/api/recall/get", GetSessionRecallData);
 
 //User APIs
 openapi.post("/api/user/create", CreateUserData);
