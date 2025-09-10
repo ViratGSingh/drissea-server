@@ -3,6 +3,11 @@ import { z } from "zod";
 import { type AppContext } from "../types.js";
 import 'dotenv/config';
 
+interface AltSerpApiResponse {
+  short_video_results?: { link: string }[];
+  // Add other fields if needed, like `inline_videos?: { link: string }[]`
+}
+
 interface SerpApiResponse {
   videos?: { link: string }[];
   // Add other fields if needed, like `inline_videos?: { link: string }[]`
@@ -88,31 +93,45 @@ export class SerpData extends OpenAPIRoute {
     const { query } = data.query;
 
     const serpUrl = "https://google.serper.dev/videos";
+    const altSerpUrl = "https://serpapi.com/search";
 
     try {
-      const res = await fetch(serpUrl, {
-        method: "POST",
+      // const res = await fetch(serpUrl, {
+      //   method: "POST",
+      //   headers: {
+      //     "X-API-KEY": `${process.env.SERP_API_KEY}`,
+      //     "Content-Type": "application/json",
+      //   },
+      //   body: JSON.stringify({
+      //     q: `${query} site:instagram.com`,
+      //     api_key: process.env.SERP_API_KEY,
+      //     num: "20",
+      //     gl: "in",
+      //     hl: "en",
+      //   }),
+      // });
+
+      // const json = (await res.json()) as SerpApiResponse;
+
+      // const links = (json?.videos || []).map((item: any) => item.link);
+      // const thumbnailLinks = (json?.videos || []).map((item: any) => item.imageUrl);
+
+
+      const altRes = await fetch(`${altSerpUrl}?q=${encodeURIComponent(query)}+site:instagram.com&api_key=${process.env.ALT_SERP_API_KEY}&engine=google_short_videos`, {
+        method: "GET",
         headers: {
-          "X-API-KEY": `${process.env.SERP_API_KEY}`,
           "Content-Type": "application/json",
         },
-        body: JSON.stringify({
-          q: `${query} site:instagram.com`,
-          api_key: process.env.SERP_API_KEY,
-          num: "20",
-          gl: "in",
-          hl: "en",
-        }),
       });
-      const json = (await res.json()) as SerpApiResponse;
-
-      const links = (json?.videos || []).map((item: any) => item.link);
-      const thumbnailLinks = (json?.videos || []).map((item: any) => item.imageUrl);
+      const altJson = (await altRes.json()) as AltSerpApiResponse;
+      //console.log(altJson);
+      const altLinks = (altJson?.short_video_results || []).map((item: any) => item.link);
+      const altThumbnailLinks = (altJson?.short_video_results || []).map((item: any) => item.thumbnail);
 
       return {
         query,
-        source_links: links,
-        thumbnail_links: thumbnailLinks,
+        source_links: altLinks,
+        thumbnail_links: altThumbnailLinks,
         success: true,
       };
     } catch (error: any) {
@@ -121,4 +140,3 @@ export class SerpData extends OpenAPIRoute {
     }
   }
 }
-
