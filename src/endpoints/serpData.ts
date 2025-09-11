@@ -92,46 +92,70 @@ export class SerpData extends OpenAPIRoute {
     const data = await this.getValidatedData<typeof this.schema>();
     const { query } = data.query;
 
+    // Get client IP from headers or connection, fallback to empty string
+    const clientIp =
+      c.req.header("x-forwarded-for")?.split(",")[0]?.trim() ||
+      c.req.header("cf-connecting-ip") ||
+      // @ts-ignore
+      c.req.raw?.connection?.remoteAddress ||
+      "";
+    let countryCode = "in";
+    try {
+      let ipapiUrl = "https://ipapi.co";
+      if (clientIp) {
+        ipapiUrl += `/${clientIp}/json/`;
+      } else {
+        ipapiUrl += "/json/";
+      }
+      const ipRes = await fetch(ipapiUrl);
+      const ipJson = (await ipRes.json()) as { country_code?: string; error?: string };
+      countryCode = ipJson.country_code ? ipJson.country_code.toLowerCase() : "in";
+    } catch (err) {
+      // If ipapi fails, fallback to default countryCode
+      countryCode = "in";
+      console.log("ipapi failed, using fallback countryCode:", countryCode);
+    }
+
     const serpUrl = "https://google.serper.dev/videos";
     const altSerpUrl = "https://serpapi.com/search";
 
     try {
-      // const res = await fetch(serpUrl, {
-      //   method: "POST",
-      //   headers: {
-      //     "X-API-KEY": `${process.env.SERP_API_KEY}`,
-      //     "Content-Type": "application/json",
-      //   },
-      //   body: JSON.stringify({
-      //     q: `${query} site:instagram.com`,
-      //     api_key: process.env.SERP_API_KEY,
-      //     num: "20",
-      //     gl: "in",
-      //     hl: "en",
-      //   }),
-      // });
-
-      // const json = (await res.json()) as SerpApiResponse;
-
-      // const links = (json?.videos || []).map((item: any) => item.link);
-      // const thumbnailLinks = (json?.videos || []).map((item: any) => item.imageUrl);
-
-
-      const altRes = await fetch(`${altSerpUrl}?q=${encodeURIComponent(query)}+site:instagram.com&api_key=${process.env.ALT_SERP_API_KEY}&engine=google_short_videos`, {
-        method: "GET",
+      const res = await fetch(serpUrl, {
+        method: "POST",
         headers: {
+          "X-API-KEY": `${process.env.SERP_API_KEY}`,
           "Content-Type": "application/json",
         },
+        body: JSON.stringify({
+          q: `${query} site:instagram.com`,
+          //api_key: process.env.SERP_API_KEY,
+          //num: "10",
+          gl: countryCode,
+          hl: "en",
+        }),
       });
-      const altJson = (await altRes.json()) as AltSerpApiResponse;
-      //console.log(altJson);
-      const altLinks = (altJson?.short_video_results || []).map((item: any) => item.link);
-      const altThumbnailLinks = (altJson?.short_video_results || []).map((item: any) => item.thumbnail);
+
+      const json = (await res.json()) as SerpApiResponse;
+
+      const links = (json?.videos || []).map((item: any) => item.link);
+      const thumbnailLinks = (json?.videos || []).map((item: any) => item.imageUrl);
+
+
+      // const altRes = await fetch(`${altSerpUrl}?q=${encodeURIComponent(query)}+site:instagram.com&api_key=${process.env.ALT_SERP_API_KEY}&engine=google_short_videos`, {
+      //   method: "GET",
+      //   headers: {
+      //     "Content-Type": "application/json",
+      //   },
+      // });
+      // const altJson = (await altRes.json()) as AltSerpApiResponse;
+      // //console.log(altJson);
+      // const altLinks = (altJson?.short_video_results || []).map((item: any) => item.link);
+      // const altThumbnailLinks = (altJson?.short_video_results || []).map((item: any) => item.thumbnail);
 
       return {
         query,
-        source_links: altLinks,
-        thumbnail_links: altThumbnailLinks,
+        source_links: links,
+        thumbnail_links: thumbnailLinks,
         success: true,
       };
     } catch (error: any) {
