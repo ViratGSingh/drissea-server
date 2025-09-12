@@ -93,13 +93,26 @@ export class GenIGSearchQuery extends OpenAPIRoute {
       "";
     let countryCode = "in";
     let userContext = "";
-    try {
-      let ipapiUrl = "https://ipapi.co";
-      if (clientIp) {
-        ipapiUrl += `/${clientIp}/json/`;
-      } else {
-        ipapiUrl += "/json/";
+    let  ipJson: {
+        city?: string;
+        region?: string;
+        country_name?: string;
+        country_code?: string;
+        timezone?: string;
+        org?: string;
+        postal?: string;
+        latitude?: number;
+        longitude?: number;
+        ip?: string;
+        error?: string;
       }
+    try {
+      let ipapiUrl = `https://ipapi.co/json/?key=${process.env.IPAPI_API_KEY}`;
+      // if (clientIp) {
+      //   ipapiUrl += `/${clientIp}/json/`;
+      // } else {
+      //   ipapiUrl += "/json/";
+      // }
       const ipRes = await fetch(ipapiUrl);
       const ipJson: {
         city?: string;
@@ -155,7 +168,10 @@ export class GenIGSearchQuery extends OpenAPIRoute {
         (postal ? `Postal: ${postal}\n` : "") +
         (latitude && longitude ? `Approximate Coordinates: ${latitude},${longitude}\n` : "");
       userContext = userContext.trim();
-      if (!userContext) userContext = "User context unavailable";
+      console.log(ipJson);
+      console.log(userContext);
+      console.log("");
+      if (!userContext) userContext = "";
     } catch (err) {
       // If ipapi fails, fallback to default countryCode and unavailable context
       countryCode = "in";
@@ -178,7 +194,24 @@ export class GenIGSearchQuery extends OpenAPIRoute {
         messages: [
           {
             role: "system",
-            content:"You are an Instagram video search query generator.\n\nYour job: rewrite the user's request into ONE short, high-impact search query that captures the main subject.\n\nRules: \nBe like a top Google searcher.\nRemove unnecessary details, adjectives, and filler words.\nAvoid any mention of content medium (like reels, videos, posts).\nUse only the exact words and spellings provided in the user's request, without altering or modifying any terms.\nDo not add, remove, or substitute any words unless explicitly present in the user's input.\nEnsure the query is concise and directly reflects the main subject of the request.\nProvide only the search query as the response, nothing else.\nTake into account the **User Context** (e.g., location, datetime). If the query includes vague terms like 'near me,' 'around here,' or 'now,' resolve them using the user context. Example: if the query is 'best places near me;' and the user context says `City: Delhi`, then rewrite as 'best places in Delhi'",
+            content: `You are an Instagram video search query generator.
+
+Your job: rewrite the user's request into ONE short, high-impact search query that captures the main subject.
+
+Rules:
+Be like a top Google searcher.
+Remove unnecessary details, adjectives, and filler words.
+Avoid any mention of content medium (like reels, videos, posts).
+Use only the exact words and spellings provided in the user's request, without altering or modifying any terms.
+Do not add, remove, or substitute any words unless explicitly present in the user's input.
+Ensure the query is concise and directly reflects the main subject of the request.
+Provide only the search query as the response, nothing else.
+
+Additionally, you have the following user context:
+${userContext}
+
+When vague terms like "near me" or "around here" are used, replace them with the actual city or location details from the user context.
+When vague terms like "right now" are used, replace them with specific part of the day (e.g., "morning," "night") based on the user's current local time from the user context.`
           },
           {
             role: "user",

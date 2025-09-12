@@ -83,22 +83,11 @@ export class IGGenAnswer extends OpenAPIRoute {
         .map((r, i) => `(${i + 1}) Content Url:\n${r.url}\nContent:${r.title} ${r.snippet}`)
         .join("\n\n");
 
-    //Set Basic User Context Data 
-    const clientIp =
-      c.req.header("x-forwarded-for")?.split(",")[0]?.trim() ||
-      c.req.header("cf-connecting-ip") ||
-      // @ts-ignore
-      c.req.raw?.connection?.remoteAddress ||
-      "";
+    //Set Basic User Context Data
     let countryCode = "in";
     let userContext = "";
     try {
-      let ipapiUrl = "https://ipapi.co";
-      if (clientIp) {
-        ipapiUrl += `/${clientIp}/json/`;
-      } else {
-        ipapiUrl += "/json/";
-      }
+      let ipapiUrl = `https://ipapi.co/json/?key=${process.env.IPAPI_API_KEY}`;
       const ipRes = await fetch(ipapiUrl);
       const ipJson: {
         city?: string;
