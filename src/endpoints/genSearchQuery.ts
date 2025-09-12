@@ -107,12 +107,12 @@ export class GenIGSearchQuery extends OpenAPIRoute {
         error?: string;
       }
     try {
-      let ipapiUrl = `https://ipapi.co/json/?key=${process.env.IPAPI_API_KEY}`;
-      // if (clientIp) {
-      //   ipapiUrl += `/${clientIp}/json/`;
-      // } else {
-      //   ipapiUrl += "/json/";
-      // }
+      let ipapiUrl = `https://ipapi.co`;
+      if (clientIp) {
+        ipapiUrl += `/${clientIp}/json/?key=${process.env.IPAPI_API_KEY}`;
+      } else {
+        ipapiUrl += `/json/?key=${process.env.IPAPI_API_KEY}`;
+      }
       const ipRes = await fetch(ipapiUrl);
       const ipJson: {
         city?: string;
