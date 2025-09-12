@@ -83,6 +83,87 @@ export class IGGenAnswer extends OpenAPIRoute {
         .map((r, i) => `(${i + 1}) Content Url:\n${r.url}\nContent:${r.title} ${r.snippet}`)
         .join("\n\n");
 
+    //Set Basic User Context Data 
+    const clientIp =
+      c.req.header("x-forwarded-for")?.split(",")[0]?.trim() ||
+      c.req.header("cf-connecting-ip") ||
+      // @ts-ignore
+      c.req.raw?.connection?.remoteAddress ||
+      "";
+    let countryCode = "in";
+    let userContext = "";
+    try {
+      let ipapiUrl = "https://ipapi.co";
+      if (clientIp) {
+        ipapiUrl += `/${clientIp}/json/`;
+      } else {
+        ipapiUrl += "/json/";
+      }
+      const ipRes = await fetch(ipapiUrl);
+      const ipJson: {
+        city?: string;
+        region?: string;
+        country_name?: string;
+        country_code?: string;
+        timezone?: string;
+        org?: string;
+        postal?: string;
+        latitude?: number;
+        longitude?: number;
+        ip?: string;
+        error?: string;
+      } = await ipRes.json();
+      countryCode = ipJson.country_code ? ipJson.country_code.toLowerCase() : "in";
+      // Extract all relevant fields
+      const {
+        city,
+        region,
+        country_name,
+        country_code,
+        timezone,
+        org,
+        postal,
+        latitude,
+        longitude,
+        ip
+      } = ipJson;
+      // Compute local datetime string
+      let datetimeStr = "";
+      if (timezone) {
+        try {
+          datetimeStr = new Intl.DateTimeFormat('en-US', {
+            dateStyle: 'full',
+            timeStyle: 'long',
+            timeZone: timezone
+          }).format(new Date());
+        } catch (e) {
+          datetimeStr = "";
+        }
+      }
+      // Build human-readable user context string
+      userContext =
+        (country_code ? `Country Code: ${country_code}\n` : "") +
+        (country_name ? `Country Name: ${country_name}\n` : "") +
+        (region ? `Region: ${region}\n` : "") +
+        (city ? `City: ${city}\n` : "") +
+        (timezone ? `Timezone: ${timezone}\n` : "") +
+        (datetimeStr && timezone ? `Date: ${new Intl.DateTimeFormat(undefined, { dateStyle: 'full', timeZone: timezone }).format(new Date())}\n` : "") +
+        (datetimeStr && timezone ? `Time: ${new Intl.DateTimeFormat(undefined, { timeStyle: 'long', timeZone: timezone }).format(new Date())}\n` : "") +
+        (org ? `ISP/Org: ${org}\n` : "") +
+        (ip ? `IP: ${ip}\n` : "") +
+        (postal ? `Postal: ${postal}\n` : "") +
+        (latitude && longitude ? `Approximate Coordinates: ${latitude},${longitude}\n` : "");
+      userContext = userContext.trim();
+      if (!userContext) userContext = "User context unavailable";
+    } catch (err) {
+      // If ipapi fails, fallback to default countryCode and unavailable context
+      countryCode = "in";
+      userContext = "User context unavailable";
+    }
+
+    // Insert user context info into prompt
+    const userContextInfo = `\n\nUser Context:\n${userContext}`;
+
       const systemPrompt = `You are Drissea, a social answer engine that watches short videos from social media to answer user queries.
 
 You are a helpful and concise assistant that answers user questions using a list of insights extracted from short videos and posts.
@@ -102,6 +183,8 @@ Your job is to write a clean, readable answer based only on the Caption/Transcri
    _"There doesn’t seem to be a direct answer available from the content reviewed."_
 6. ❌ Do not repeat the question or use generic filler lines.
 7. ⚡ Keep your language short, engaging, and optimized for mobile readability.
+Here's the user context:
+${userContext}
 
 Here’s the video content:
 ${formattedSources}`;
