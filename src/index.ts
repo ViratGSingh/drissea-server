@@ -27,6 +27,9 @@ import { GetRecallData } from "./endpoints/getRecallData.js";
 import { CreateRecallData } from "./endpoints/createRecallData.js";
 import { UpdateRecallData } from "./endpoints/updateRecallData.js";
 import { GetSessionRecallData } from "./endpoints/getSessionRecallData.js";
+import { UpdSerpData } from "./endpoints/updSerpData.js";
+import { AltGetSourceData } from "./endpoints/altGetSourceData.js";
+import { ExtractAllVideoData } from "./endpoints/extractAllContentData.js";
 
 // Start a Hono app
 const app = new Hono<{ Bindings: Env }>();
@@ -47,15 +50,23 @@ openapi.get("/api/search-data", SearchData);
 openapi.post("/api/save-search-data", SaveResultData);
 openapi.post("/api/search/gen/query", GenIGSearchQuery);
 
+
 //Instagram APIs
 openapi.get("/api/instagram/extract/reel", IGVideoData);
 openapi.get("/api/instagram/get/content", GetIgVideoData);
 openapi.post("/api/instagram/extract/content", ExtractIGVideoData);
-openapi.post("/api/instagram/cache/content", GetCacheData);
+openapi.post("/api/instagram/cache/content", GetCacheData); 
 openapi.post("/api/instagram/get/source", GetIgSourceData);
 openapi.post("/api/instagram/get/source/alt", AltGetIgSourceData);
 openapi.post("/api/instagram/backup/data", IGSaveVideoData);
 openapi.post("/api/instagram/gen/answer", IGGenAnswer);
+
+//New Approach APIs
+openapi.get("/api/search/source", UpdSerpData);
+openapi.post("/api/fetch/source", AltGetSourceData);
+openapi.post("/api/extract/source", ExtractAllVideoData);
+
+//openapi.post("/api/youtube/extract", YTExtractData);
 
 //Session APIs
 openapi.post("/api/session/create", CreateSessionData);
