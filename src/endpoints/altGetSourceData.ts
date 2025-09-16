@@ -100,9 +100,7 @@ export class AltGetSourceData extends OpenAPIRoute {
     }
 
     const data = await this.getValidatedData<typeof this.schema>();
-    const options = {
-
-    }
+    const options = {};
 
     //Setup proxy
     //Bright Data Access
@@ -110,20 +108,16 @@ export class AltGetSourceData extends OpenAPIRoute {
     const proxy_host = process.env.OXY_HOST;
     const proxy_port = parseInt(process.env.OXY_PORT ?? "", 10);
     const proxy_passwd = process.env.OXY_PASSWORD;
-    
-    const proxyUrl = `https://${proxy_user}:${proxy_passwd}@${proxy_host}:${proxy_port}`;
+
+    const proxyUrl = `http://${proxy_user}:${proxy_passwd}@${proxy_host}:${proxy_port}`;
     const httpsAgent = new HttpsProxyAgent(proxyUrl);
 
     const requestOptions = {
       //agent: httpsAgent,
-      headers:{
-
-      },
-      agent:httpsAgent
+      headers: {},
+      agent: httpsAgent,
     };
 
-
-    
     const { urls, csrfToken: incomingCsrfToken } = data.body;
 
     //Get CSRF Token if not provided
@@ -169,9 +163,63 @@ type Answer = {
 
 export async function formatYouTubeData(url: string, requestOptions: any) {
   let videoData;
+
   try {
     videoData = await YouTube.getVideo(url, requestOptions);
-    const formattedVideoData = {
+  } catch (err) {
+    // Catch only failures from YouTube.getVideo
+    return {
+      sourceUrl: (err as Error).message || "Failed to fetch YouTube video",
+      has_audio: true,
+      user: {
+        username: "",
+        fullname: "",
+        id: "",
+        is_verified: false,
+        total_media: 1,
+        total_followers: 0,
+      },
+      video: {
+        id: "",
+        duration: 0,
+        thumbnail_url: "",
+        video_url: url,
+        views: 0,
+        plays: 0,
+        timestamp: 0,
+        caption: "",
+      },
+    };
+  }
+
+  // If videoData is null or undefined, handle gracefully
+  if (!videoData) {
+    return {
+      sourceUrl: url,
+      has_audio: false,
+      user: {
+        username: "",
+        fullname: "",
+        id: "",
+        is_verified: false,
+        total_media: 0,
+        total_followers: 0,
+      },
+      video: {
+        id: "",
+        duration: 0,
+        thumbnail_url: "",
+        video_url: url,
+        views: 0,
+        plays: 0,
+        timestamp: 0,
+        caption: "No video data returned",
+      },
+    };
+  }
+
+  // Normal successful case
+  return {
     sourceUrl: videoData.url,
     has_audio: true,
     user: {
@@ -184,7 +232,7 @@ export async function formatYouTubeData(url: string, requestOptions: any) {
     },
     video: {
       id: videoData.id,
-      duration: videoData.duration / 1000, // convert ms to seconds if needed
+      duration: videoData.duration / 1000,
       thumbnail_url: videoData.thumbnail?.url || "",
       video_url: videoData.url,
       views: videoData.views || 0,
@@ -195,34 +243,4 @@ export async function formatYouTubeData(url: string, requestOptions: any) {
       caption: videoData.title || "",
     },
   };
-
-  return formattedVideoData;
-  } catch (err) {
-    const formattedErrVideoData = {
-    sourceUrl: (err as Error).message,
-    has_audio: true,
-    user: {
-      username: "",
-      fullname: "",
-      id: "",
-      is_verified:  false,
-      total_media: 1,
-      total_followers:  0,
-    },
-    video: {
-      id: "",
-      duration:1000, // convert ms to seconds if needed
-      thumbnail_url: "",
-      video_url: url,
-      views: 0,
-      plays:  0,
-      timestamp:  0,
-      caption:  "",
-    },
-  };
-
-  return formattedErrVideoData;
-  }
-
-  
 }
