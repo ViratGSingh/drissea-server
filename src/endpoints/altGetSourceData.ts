@@ -213,7 +213,7 @@ export async function formatYouTubeData(url: string, requestOptions: any) {
       id: "",
       duration:1000, // convert ms to seconds if needed
       thumbnail_url: "",
-      video_url: "",
+      video_url: url,
       views: 0,
       plays:  0,
       timestamp:  0,
