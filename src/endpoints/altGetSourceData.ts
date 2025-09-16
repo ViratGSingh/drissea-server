@@ -165,7 +165,7 @@ export async function formatYouTubeData(url: string, requestOptions: any) {
   let videoData;
 
   try {
-    videoData = await YouTube.getVideo(url, requestOptions);
+    videoData = await YouTube.getVideo(url);
   } catch (err) {
     // Catch only failures from YouTube.getVideo
     return {
