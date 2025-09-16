@@ -229,8 +229,8 @@ export async function fetchYouTubeVideoData(url: string): Promise<any> {
       sourceUrl: url,
       has_audio: true,
       user: {
-        username: ownerProfile || "",
-        fullname: "",
+        username: "",
+        fullname: ownerProfile || "",
         id: channelId || "",
         is_verified: false,
         total_media: 1,
