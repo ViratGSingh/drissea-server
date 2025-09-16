@@ -130,10 +130,14 @@ export class AltGetSourceData extends OpenAPIRoute {
 
           let response;
           if (sourceUrl.includes("youtube") || sourceUrl.includes("youtu.be")) {
-            response = await formatYouTubeData(sourceUrl, requestOptions);
-          } else if (sourceUrl.includes("instagram")) {
+            response = await fetchYouTubeVideoData(sourceUrl);
+            const sampleYtResp = await fetchYouTubeVideoData(sourceUrl);
+            console.log(sampleYtResp)
+          } 
+          else if (sourceUrl.includes("instagram")) {
             response = await instagramGetUrl(sourceUrl, undefined, csrfToken);
-          } else {
+          } 
+          else {
             response = null;
           }
           return response;
@@ -161,86 +165,91 @@ type Answer = {
   source_links: string[];
 };
 
-export async function formatYouTubeData(url: string, requestOptions: any) {
-  let videoData;
-
+export async function fetchYouTubeVideoData(url: string): Promise<any> {
   try {
-    videoData = await YouTube.getVideo(url);
-  } catch (err) {
-    // Catch only failures from YouTube.getVideo
+    const config = {
+      method: 'GET',
+      url,
+      httpsAgent: new HttpsProxyAgent(
+        `http://${process.env.OXY_USERNAME}:${process.env.OXY_PASSWORD}@${process.env.OXY_HOST}:${process.env.OXY_PORT}`
+      ),
+    };
+    const response = await axios.request(config);
+    const html = response.data;
+    const $ = cheerio.load(html);
+
+    // Extract ytInitialData
+    const ytInitialDataMatch = html.match(/var ytInitialData = (.*?);<\/script>/s);
+    let ytInitialData = null;
+    if (ytInitialDataMatch && ytInitialDataMatch[1]) {
+      ytInitialData = JSON.parse(ytInitialDataMatch[1]);
+    }
+
+    // Extract ytInitialPlayerResponse
+    const ytInitialPlayerResponseMatch = html.match(/var ytInitialPlayerResponse = (.*?);<\/script>/s);
+    let ytInitialPlayerResponse = null;
+    if (ytInitialPlayerResponseMatch && ytInitialPlayerResponseMatch[1]) {
+      ytInitialPlayerResponse = JSON.parse(ytInitialPlayerResponseMatch[1]);
+    }
+
+    // Extract basic video details
+    const videoDetails = ytInitialPlayerResponse?.videoDetails || {};
+    const microformat = ytInitialPlayerResponse?.microformat?.playerMicroformatRenderer || {};
+
+    // Extract owner info if available
+    const ownerProfile = ytInitialPlayerResponse?.videoDetails?.author || null;
+    const channelId = ytInitialPlayerResponse?.videoDetails?.channelId || null;
+
+    // Extract likes and dislikes from videoActions or other available fields
+    let likes = null;
+    let dislikes = null;
+    try {
+      const videoActions = ytInitialPlayerResponse?.engagementPanels || [];
+      // Fallback: likes might be in videoDetails or other parts, but YouTube often hides dislikes
+      // So we try to find likes count in videoDetails or elsewhere
+      if (ytInitialPlayerResponse?.videoDetails?.likeCount) {
+        likes = parseInt(ytInitialPlayerResponse.videoDetails.likeCount, 10);
+      }
+    } catch (e) {
+      // ignore errors
+    }
+
+    // Determine privacy status, unlisted, nsfw, live, shorts
+    const isPrivate = ytInitialPlayerResponse?.playabilityStatus?.status === "PRIVATE" || false;
+    const isUnlisted = microformat?.liveBroadcastDetails?.isUnlisted || false;
+    const isLive = microformat?.liveBroadcastDetails?.isLiveNow || false;
+
+    // NSFW detection is not straightforward; YouTube does not explicitly mark videos as NSFW in this data
+    // We'll set it to false as default
+    const isNsfw = false;
+
+    // Shorts detection: check if url contains "/shorts/"
+    const isShorts = url.includes("/shorts/");
     return {
-      sourceUrl: (err as Error).message || "Failed to fetch YouTube video",
+      sourceUrl: url,
       has_audio: true,
       user: {
-        username: "",
+        username: ownerProfile || "",
         fullname: "",
-        id: "",
+        id: channelId || "",
         is_verified: false,
         total_media: 1,
         total_followers: 0,
       },
       video: {
-        id: "",
-        duration: 0,
-        thumbnail_url: "",
+        id: videoDetails.videoId || "",
+        duration: (parseInt(videoDetails.lengthSeconds || "0", 10)) || 0,
+        thumbnail_url: videoDetails.thumbnail?.thumbnails?.[0]?.url || "",
         video_url: url,
-        views: 0,
-        plays: 0,
-        timestamp: 0,
-        caption: "",
+        views: parseInt(videoDetails.viewCount || "0", 10),
+        plays: parseInt(videoDetails.viewCount || "0", 10),
+        timestamp: microformat.uploadDate
+          ? Math.floor(new Date(microformat.uploadDate).getTime() / 1000)
+          : 0,
+        caption: videoDetails.title || "",
       },
     };
+  } catch (e) {
+    return null;
   }
-
-  // If videoData is null or undefined, handle gracefully
-  if (!videoData) {
-    return {
-      sourceUrl: url,
-      has_audio: false,
-      user: {
-        username: "",
-        fullname: "",
-        id: "",
-        is_verified: false,
-        total_media: 0,
-        total_followers: 0,
-      },
-      video: {
-        id: "",
-        duration: 0,
-        thumbnail_url: "",
-        video_url: url,
-        views: 0,
-        plays: 0,
-        timestamp: 0,
-        caption: "No video data returned",
-      },
-    };
-  }
-
-  // Normal successful case
-  return {
-    sourceUrl: videoData.url,
-    has_audio: true,
-    user: {
-      username: videoData.channel?.name || "",
-      fullname: "",
-      id: videoData.channel?.id || "",
-      is_verified: videoData.channel?.verified || false,
-      total_media: 1,
-      total_followers: videoData.channel?.subscribers || 0,
-    },
-    video: {
-      id: videoData.id,
-      duration: videoData.duration / 1000,
-      thumbnail_url: videoData.thumbnail?.url || "",
-      video_url: videoData.url,
-      views: videoData.views || 0,
-      plays: videoData.views || 0,
-      timestamp: videoData.uploadedAt
-        ? Math.floor(new Date(videoData.uploadedAt).getTime() / 1000)
-        : 0,
-      caption: videoData.title || "",
-    },
-  };
 }
