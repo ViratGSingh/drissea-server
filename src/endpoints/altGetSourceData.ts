@@ -111,7 +111,7 @@ export class AltGetSourceData extends OpenAPIRoute {
     const proxy_port = parseInt(process.env.OXY_PORT ?? "", 10);
     const proxy_passwd = process.env.OXY_PASSWORD;
     
-    const proxyUrl = `http://${proxy_user}:${proxy_passwd}@${proxy_host}:${proxy_port}`;
+    const proxyUrl = `https://${proxy_user}:${proxy_passwd}@${proxy_host}:${proxy_port}`;
     const httpsAgent = new HttpsProxyAgent(proxyUrl);
 
     const requestOptions = {
