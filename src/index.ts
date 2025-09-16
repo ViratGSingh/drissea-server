@@ -90,7 +90,7 @@ openapi.get("/api/og-extract", OgExtract);
 // You may also register routes for non OpenAPI directly on Hono
 // app.get('/test', (c) => c.text('Hono!'))
 
-const port = parseInt(process.env.PORT || '3000');
+const port = parseInt(process.env.PORT || '8000');
 console.log(`🚀 Hono server running at http://localhost:${port}`);
 serve({
   fetch: app.fetch,
