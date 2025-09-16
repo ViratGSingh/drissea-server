@@ -168,9 +168,10 @@ type Answer = {
 };
 
 export async function formatYouTubeData(url: string, requestOptions: any) {
-  const videoData = await YouTube.getVideo(url, requestOptions);
-
-  const formattedVideoData = {
+  let videoData;
+  try {
+    videoData = await YouTube.getVideo(url, requestOptions);
+    const formattedVideoData = {
     sourceUrl: videoData.url,
     has_audio: true,
     user: {
@@ -196,4 +197,32 @@ export async function formatYouTubeData(url: string, requestOptions: any) {
   };
 
   return formattedVideoData;
+  } catch (err) {
+    const formattedErrVideoData = {
+    sourceUrl: (err as Error).message,
+    has_audio: true,
+    user: {
+      username: "",
+      fullname: "",
+      id: "",
+      is_verified:  false,
+      total_media: 1,
+      total_followers:  0,
+    },
+    video: {
+      id: "",
+      duration:1000, // convert ms to seconds if needed
+      thumbnail_url: "",
+      video_url: "",
+      views: 0,
+      plays:  0,
+      timestamp:  0,
+      caption:  "",
+    },
+  };
+
+  return formattedErrVideoData;
+  }
+
+  
 }
