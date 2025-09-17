@@ -5,6 +5,7 @@ import 'dotenv/config';
 
 interface AltSerpApiResponse {
   short_video_results?: { link: string }[];
+  video_results?: { link: string }[];
   // Add other fields if needed, like `inline_videos?: { link: string }[]`
 }
 
@@ -123,42 +124,66 @@ export class UpdSerpData extends OpenAPIRoute {
     const altSerpUrl = "https://serpapi.com/search";
 
     try {
-      const res = await fetch(serpUrl, {
-        method: "POST",
+      // const res = await fetch(serpUrl, {
+      //   method: "POST",
+      //   headers: {
+      //     "X-API-KEY": `${process.env.SERP_API_KEY}`,
+      //     "Content-Type": "application/json",
+      //   },
+      //   body: JSON.stringify({
+      //     q: `${query}`,
+      //     //api_key: process.env.SERP_API_KEY,
+      //     num: "10",
+      //     gl:countryCode,
+      //     location:country,
+      //     hl: "en",
+      //   }),
+      // });
+
+      // const json = (await res.json()) as SerpApiResponse;
+
+      //Get Short Videos
+      const altRes = await fetch(`${altSerpUrl}?q=${encodeURIComponent(query)}&api_key=${process.env.ALT_SERP_API_KEY}&engine=google_short_videos&gl=${countryCode}&location=${country},`, {
+        method: "GET",
         headers: {
-          "X-API-KEY": `${process.env.SERP_API_KEY}`,
           "Content-Type": "application/json",
         },
-        body: JSON.stringify({
-          q: `${query}`,
-          //api_key: process.env.SERP_API_KEY,
-          num: "10",
-          gl:countryCode,
-          location:country,
-          hl: "en",
-        }),
       });
+      const altJson = (await altRes.json()) as AltSerpApiResponse;
 
-      const json = (await res.json()) as SerpApiResponse;
+      const shortVideoLinks = (altJson?.short_video_results || [])
+      .filter((item: any) => {
+          const link = item.link || "";
+          if (link.includes("instagram")){
+            return true;
+          }else if (link.includes("youtube") || link.includes("youtu.be")) {
+          return true;
+          }else{
+          return false;
+          }
+        })
+      .map((item: any) => item.link);
 
-      const links = (json?.videos || [])
+
+      //Get Videos
+      const altVideosRes = await fetch(`${altSerpUrl}?q=${encodeURIComponent(query)}&api_key=${process.env.ALT_SERP_API_KEY}&engine=google_videos&gl=${countryCode}&location=${country},`, {
+        method: "GET",
+        headers: {
+          "Content-Type": "application/json",
+        },
+      });
+      const altVideosJson = (await altVideosRes.json()) as AltSerpApiResponse;
+
+      const videoLinks = (altVideosJson?.video_results || [])
         .filter((item: any) => {
           const link = item.link || "";
-          if (link.includes("instagram")) return true;
-          if (link.includes("youtube") || link.includes("youtu.be")) {
-            if (!item.duration) return false;
-            const parts = item.duration.split(":").map(Number);
-            let hours = 0, minutes = 0, seconds = 0;
-            if (parts.length === 3) {
-              [hours, minutes, seconds] = parts;
-            } else if (parts.length === 2) {
-              [minutes, seconds] = parts;
-            } else if (parts.length === 1) {
-              [seconds] = parts;
-            }
-            return hours < 1;
-          }
+          if (link.includes("instagram")){
+            return true;
+          }else if (link.includes("youtube") || link.includes("youtu.be")) {
+          return true;
+          }else{
           return false;
+          }
         })
         .map((item: any) => item.link);
       // const thumbnailLinks = (json?.videos || [])
@@ -183,20 +208,14 @@ export class UpdSerpData extends OpenAPIRoute {
       //   .map((item: any) => item.imageUrl);
 
 
-      // const altRes = await fetch(`${altSerpUrl}?q=${encodeURIComponent(query)}+site:instagram.com&api_key=${process.env.ALT_SERP_API_KEY}&engine=google_short_videos`, {
-      //   method: "GET",
-      //   headers: {
-      //     "Content-Type": "application/json",
-      //   },
-      // });
-      // const altJson = (await altRes.json()) as AltSerpApiResponse;
+      
       // //console.log(altJson);
       // const altLinks = (altJson?.short_video_results || []).map((item: any) => item.link);
       // const altThumbnailLinks = (altJson?.short_video_results || []).map((item: any) => item.thumbnail);
-
+      
       return {
         query,
-        source_links: links,
+        source_links: [...shortVideoLinks, ...videoLinks],
         //thumbnail_links: thumbnailLinks,
         success: true,
       };
