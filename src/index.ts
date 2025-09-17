@@ -30,6 +30,7 @@ import { GetSessionRecallData } from "./endpoints/getSessionRecallData.js";
 import { UpdSerpData } from "./endpoints/updSerpData.js";
 import { AltGetSourceData } from "./endpoints/altGetSourceData.js";
 import { ExtractAllVideoData } from "./endpoints/extractAllContentData.js";
+import { UpdGenSearchQuery } from "./endpoints/altGenSearchQuery.js";
 
 // Start a Hono app
 const app = new Hono<{ Bindings: Env }>();
@@ -62,6 +63,8 @@ openapi.post("/api/instagram/backup/data", IGSaveVideoData);
 openapi.post("/api/instagram/gen/answer", IGGenAnswer);
 
 //New Approach APIs
+
+openapi.post("/api/generate/query", UpdGenSearchQuery);
 openapi.get("/api/search/source", UpdSerpData);
 openapi.post("/api/fetch/source", AltGetSourceData);
 openapi.post("/api/extract/source", ExtractAllVideoData);

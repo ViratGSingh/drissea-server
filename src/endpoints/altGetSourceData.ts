@@ -202,9 +202,7 @@ export async function fetchYouTubeVideoData(url: string): Promise<any> {
 
     // Extract likes and dislikes from videoActions or other available fields
     let likes = null;
-    let dislikes = null;
     try {
-      const videoActions = ytInitialPlayerResponse?.engagementPanels || [];
       // Fallback: likes might be in videoDetails or other parts, but YouTube often hides dislikes
       // So we try to find likes count in videoDetails or elsewhere
       if (ytInitialPlayerResponse?.videoDetails?.likeCount) {
@@ -214,17 +212,6 @@ export async function fetchYouTubeVideoData(url: string): Promise<any> {
       // ignore errors
     }
 
-    // Determine privacy status, unlisted, nsfw, live, shorts
-    const isPrivate = ytInitialPlayerResponse?.playabilityStatus?.status === "PRIVATE" || false;
-    const isUnlisted = microformat?.liveBroadcastDetails?.isUnlisted || false;
-    const isLive = microformat?.liveBroadcastDetails?.isLiveNow || false;
-
-    // NSFW detection is not straightforward; YouTube does not explicitly mark videos as NSFW in this data
-    // We'll set it to false as default
-    const isNsfw = false;
-
-    // Shorts detection: check if url contains "/shorts/"
-    const isShorts = url.includes("/shorts/");
     //console.log(videoDetails);
     return {
       sourceUrl: url,
