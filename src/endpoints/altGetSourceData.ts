@@ -131,8 +131,8 @@ export class AltGetSourceData extends OpenAPIRoute {
           let response;
           if (sourceUrl.includes("youtube") || sourceUrl.includes("youtu.be")) {
             response = await fetchYouTubeVideoData(sourceUrl);
-            const sampleYtResp = await fetchYouTubeVideoData(sourceUrl);
-            console.log(sampleYtResp)
+            //const sampleYtResp = await fetchYouTubeVideoData(sourceUrl);
+            //console.log(sampleYtResp)
           } 
           else if (sourceUrl.includes("instagram")) {
             response = await instagramGetUrl(sourceUrl, undefined, csrfToken);
@@ -225,6 +225,7 @@ export async function fetchYouTubeVideoData(url: string): Promise<any> {
 
     // Shorts detection: check if url contains "/shorts/"
     const isShorts = url.includes("/shorts/");
+    //console.log(videoDetails);
     return {
       sourceUrl: url,
       has_audio: true,
@@ -247,6 +248,62 @@ export async function fetchYouTubeVideoData(url: string): Promise<any> {
           ? Math.floor(new Date(microformat.uploadDate).getTime() / 1000)
           : 0,
         caption: videoDetails.title || "",
+      },
+    };
+  } catch (e) {
+    return null;
+  }
+}
+
+
+export async function altFetchYouTubeVideoData(url: string): Promise<any> {
+  try {
+    let videoId = "";
+    const vMatch = url.match(/[?&]v=([^&]+)/);
+    if (vMatch && vMatch[1]) {
+      videoId = vMatch[1];
+    } else {
+      const shortMatch = url.match(/youtu\.be\/([^?&]+)/);
+      if (shortMatch && shortMatch[1]) {
+        videoId = shortMatch[1];
+      }
+    }
+    if (!videoId) {
+      return null;
+    }
+
+    const serp = await axios.get("https://serpapi.com/search", {
+      params: {
+        engine: "youtube_video",
+        v: videoId,
+        api_key: process.env.ALT_SERP_API_KEY,
+      },
+    });
+
+    const data = serp.data;
+
+    return {
+      sourceUrl: data.youtube_video_url,
+      has_audio: true,
+      user: {
+        username: "",
+        fullname: data.channel?.name || "",
+        id: data.channel?.link || "",
+        is_verified: false,
+        total_media: 1,
+        total_followers: data.channel?.extracted_subscribers || 0,
+      },
+      video: {
+        id: data.search_parameters?.v || "",
+        duration: 0,
+        thumbnail_url: data.thumbnail || "",
+        video_url: data.youtube_video_url,
+        views: data.extracted_views || 0,
+        plays: data.extracted_views || 0,
+        timestamp: data.published_date
+          ? Math.floor(new Date(data.published_date).getTime() / 1000)
+          : 0,
+        caption: data.title || "",
       },
     };
   } catch (e) {
