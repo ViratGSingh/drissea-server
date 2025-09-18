@@ -32,6 +32,8 @@ import { AltGetSourceData } from "./endpoints/altGetSourceData.js";
 import { ExtractAllVideoData } from "./endpoints/extractAllContentData.js";
 import { UpdGenSearchQuery } from "./endpoints/altGenSearchQuery.js";
 import { UpdGenAnswer } from "./endpoints/updGenAnswer.js";
+import { GenRecallAnswer } from "./endpoints/genRecallAnswer.js";
+import { UpdGetRecallData } from "./endpoints/updGetRecallData.js";
 
 // Start a Hono app
 const app = new Hono<{ Bindings: Env }>();
@@ -70,6 +72,8 @@ openapi.get("/api/search/source", UpdSerpData);
 openapi.post("/api/fetch/source", AltGetSourceData);
 openapi.post("/api/extract/source", ExtractAllVideoData);
 openapi.post("/api/generate/answer", UpdGenAnswer);
+openapi.post("/api/recall/answer", GenRecallAnswer);
+openapi.post("/api/recall/sources", UpdGetRecallData);
 
 //openapi.post("/api/youtube/extract", YTExtractData);
 
