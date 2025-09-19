@@ -160,7 +160,6 @@ export class GenRecallAnswer extends OpenAPIRoute {
           datetimeStr = "";
         }
       }
-      // Build human-readable user context string
       userContext =
         (country_code ? `Country Code: ${country_code}\n` : "") +
         (country_name ? `Country Name: ${country_name}\n` : "") +
@@ -168,23 +167,27 @@ export class GenRecallAnswer extends OpenAPIRoute {
         (city ? `City: ${city}\n` : "") +
         (timezone ? `Timezone: ${timezone}\n` : "") +
         (datetimeStr && timezone
-          ? `Date: ${new Intl.DateTimeFormat(undefined, {
-              dateStyle: "full",
+          ? `Date: ${new Intl.DateTimeFormat(countryCode && countryCode.length === 2 ? `en-${countryCode.toUpperCase()}` : undefined, {
+              dateStyle: "medium",
+              timeStyle: "short",
               timeZone: timezone,
             }).format(new Date())}\n`
           : "") +
         (datetimeStr && timezone
           ? `Time: ${new Intl.DateTimeFormat(undefined, {
-              timeStyle: "long",
+              dateStyle: "medium",
+              timeStyle: "short",
               timeZone: timezone,
             }).format(new Date())}\n`
-          : "") +
-        (org ? `ISP/Org: ${org}\n` : "") +
-        (ip ? `IP: ${ip}\n` : "") +
-        (postal ? `Postal: ${postal}\n` : "") +
-        (latitude && longitude
-          ? `Approximate Coordinates: ${latitude},${longitude}\n`
-          : "");
+          : "")
+        //(org ? `ISP/Org: ${org}\n` : "") +
+        //(ip ? `IP: ${ip}\n` : "") +
+        //(postal ? `Postal: ${postal}\n` : "") +
+        // (latitude && longitude
+        //   ? `Approximate Coordinates: ${latitude},${longitude}\n`
+        //   : ""
+        // )
+        ;
       userContext = userContext.trim();
       if (!userContext) userContext = "";
     } catch (err) {
@@ -228,6 +231,7 @@ export class GenRecallAnswer extends OpenAPIRoute {
         const firstQuestion = Array.isArray(data.questions) ? data.questions[0] : "";
         const firstAnswer = Array.isArray(data.answers) ? data.answers[0] : "";
         const createdAt = data.createdAt;
+        
         // Prefer the explicit timezone from ipapi (if available) so the timestamp is shown in the user's local time.
         // For locale, construct a reasonable BCP-47 tag using English + the country (e.g. "en-IN").
         const tz = userTimezone && typeof userTimezone === "string" ? userTimezone : undefined;
@@ -239,9 +243,56 @@ export class GenRecallAnswer extends OpenAPIRoute {
               timeZone: tz,
             })
           : "";
-        return `(${i + 1}) Date:\n${formattedDate}\nQuestion:\n${firstQuestion}\nAnswer:\n${firstAnswer}`;
+        let daysAgoStr = "";
+        if (createdAt) {
+          const diffMs = Date.now() - new Date(createdAt).getTime();
+          const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24));
+          const createdDate = new Date(createdAt);
+          const now = new Date();
+
+          const createdStr = createdDate.toLocaleDateString(locale, { timeZone: tz });
+          const nowStr = now.toLocaleDateString(locale, { timeZone: tz });
+
+          const createdYear = createdDate.toLocaleDateString(locale, { year: "numeric", timeZone: tz });
+          const createdMonth = createdDate.toLocaleDateString(locale, { month: "2-digit", timeZone: tz });
+          const createdDay = createdDate.toLocaleDateString(locale, { day: "2-digit", timeZone: tz });
+
+          const nowYear = now.toLocaleDateString(locale, { year: "numeric", timeZone: tz });
+          const nowMonth = now.toLocaleDateString(locale, { month: "2-digit", timeZone: tz });
+          const nowDay = now.toLocaleDateString(locale, { day: "2-digit", timeZone: tz });
+
+          if (createdYear === nowYear && createdMonth === nowMonth && createdDay === nowDay) {
+            daysAgoStr = " (today)";
+          } else {
+            const yesterday = new Date(now);
+            yesterday.setDate(now.getDate() - 1);
+            const yYear = yesterday.toLocaleDateString(locale, { year: "numeric", timeZone: tz });
+            const yMonth = yesterday.toLocaleDateString(locale, { month: "2-digit", timeZone: tz });
+            const yDay = yesterday.toLocaleDateString(locale, { day: "2-digit", timeZone: tz });
+
+            if (createdYear === yYear && createdMonth === yMonth && createdDay === yDay) {
+              daysAgoStr = " (yesterday)";
+            } else {
+              daysAgoStr = ` (${diffDays} days ago)`;
+            }
+          }
+        }
+        const sessionTime = createdAt
+          ? new Date(createdAt).toLocaleTimeString(locale, {
+              hour: "2-digit",
+              minute: "2-digit",
+              second: "2-digit",
+              timeZone: tz,
+            })
+          : "";
+        console.log(formattedDate);
+        console.log(daysAgoStr);
+        console.log(firstQuestion);
+        return `(${i + 1}) Date & Time:\n${formattedDate}${daysAgoStr}\nQuestion:\n${firstQuestion}\nAnswer:\n${firstAnswer}`;
       })
+      .reverse()
       .join("\n\n");
+
 
     // const sessionsData = await this.getValidatedData<typeof this.schema>();
     // const { query, results } = data.body;
@@ -258,18 +309,18 @@ export class GenRecallAnswer extends OpenAPIRoute {
             role: "system",
             content: `You are Drissea, a helpful assistant.
 
-Your task: Answer the user's question in detail, but only using the context information provided. Do not add information from outside the given context.
+Your task: Answer the user’s question in detail using only the context information provided. Do not add information from outside the given context.
 
-Context includes:
-- User context details
-- The user's most recent question and answer pairs
+The context provided to you contains:
+- User context details (such as location, timezone, and other available metadata).
+- A list of the most recent questions asked by the user and the answers you previously gave, each with the exact date and time when the question was asked.
 
-Always ensure your answer is clear, well-structured, and grounded only in the provided context.
+Use this context to understand what the user is interested in and to ensure continuity and relevance in your response. Always ground your answer only in the provided context, making sure it is clear, structured, and helpful.
 
 Here is the user context:
 ${userContext}
 
-Here are the user's most recent question and answer pairs:
+Here is a chronological record of the user's most recent questions and your answers, each with the date and time of when the question was asked. Use this history only as supporting context to better understand the user’s intent. Always prioritize answering the current question over repeating past ones:
 ${formattedSessions}`,
           },
           {
