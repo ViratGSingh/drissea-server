@@ -290,7 +290,6 @@ export class GenRecallAnswer extends OpenAPIRoute {
         console.log(firstQuestion);
         return `(${i + 1}) Date & Time:\n${formattedDate}${daysAgoStr}\nQuestion:\n${firstQuestion}\nAnswer:\n${firstAnswer}`;
       })
-      .reverse()
       .join("\n\n");
 
 
