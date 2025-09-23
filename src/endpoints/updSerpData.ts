@@ -178,11 +178,21 @@ export class UpdSerpData extends OpenAPIRoute {
         .filter((item: any) => {
           const link = item.link || "";
           if (link.includes("instagram")){
-            return true;
-          }else if (link.includes("youtube") || link.includes("youtu.be")) {
-          return true;
+            if(link.includes("reel") || link.includes("reels"))
+              {
+              return true;
+            }else{
+              return false;
+            }
+          }else if (link.includes("youtube") || link.includes("youtu.be") ) {
+            if(link.includes("watch") || link.includes("shorts"))
+              {
+              return true;
+            }else{
+              return false;
+            }
           }else{
-          return false;
+            return false;
           }
         })
         .map((item: any) => item.link);
