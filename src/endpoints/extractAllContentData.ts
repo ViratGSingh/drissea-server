@@ -125,6 +125,7 @@ export class ExtractAllVideoData extends OpenAPIRoute {
               ...video,
               video: {
                 ...video.video,
+                video_url: video.sourceUrl,
                 framewatch: "",
                 transcription: data.transcription ?? "",
               },
@@ -146,6 +147,7 @@ export class ExtractAllVideoData extends OpenAPIRoute {
               ...video,
               video: {
                 ...video.video,
+                video_url: video.sourceUrl,
                 framewatch: "",
                 transcription: transcriptionText,
               },
@@ -191,6 +193,7 @@ export class ExtractAllVideoData extends OpenAPIRoute {
                 ...video,
                 video: {
                   ...video.video,
+                  video_url: video.sourceUrl,
                   framewatch: data.framewatch ?? "",
                   transcription: data.transcription ?? "",
                 },
@@ -238,6 +241,7 @@ export class ExtractAllVideoData extends OpenAPIRoute {
               ...video,
               video: {
                 ...video.video,
+                video_url: video.sourceUrl,
                 transcription: "",
                 framewatch: framewatchText,
               },
@@ -282,6 +286,7 @@ export class ExtractAllVideoData extends OpenAPIRoute {
               ...video,
               video: {
                 ...video.video,
+                video_url: video.sourceUrl,
                 transcription: transcriptResponse.text,
                 framewatch: framewatchText,
               },
@@ -319,6 +324,7 @@ export class ExtractAllVideoData extends OpenAPIRoute {
               ...video,
               video: {
                 ...video.video,
+                video_url: video.sourceUrl,
                 transcription: "",
                 framewatch: framewatchText,
               },
