@@ -165,81 +165,95 @@ type Answer = {
   source_links: string[];
 };
 
+
 export async function fetchYouTubeVideoData(url: string): Promise<any> {
-  try {
-    const config = {
-      method: 'GET',
-      url,
-      httpsAgent: new HttpsProxyAgent(
-        `http://${process.env.OXY_USERNAME}:${process.env.OXY_PASSWORD}@${process.env.OXY_HOST}:${process.env.OXY_PORT}`
-      ),
-    };
-    const response = await axios.request(config);
-    const html = response.data;
-    const $ = cheerio.load(html);
+  //try {
+    // const config = {
+    //   method: 'GET',
+    //   url,
+    //   httpsAgent: new HttpsProxyAgent(
+    //     `http://${process.env.OXY_USERNAME}:${process.env.OXY_PASSWORD}@${process.env.OXY_HOST}:${process.env.OXY_PORT}`
+    //   ),
+    // };
+    // const response = await axios.request(config);
+    // const html = response.data;
+    // const $ = cheerio.load(html);
 
-    // Extract ytInitialData
-    const ytInitialDataMatch = html.match(/var ytInitialData = (.*?);<\/script>/s);
-    let ytInitialData = null;
-    if (ytInitialDataMatch && ytInitialDataMatch[1]) {
-      ytInitialData = JSON.parse(ytInitialDataMatch[1]);
-    }
+    // // Extract ytInitialData
+    // const ytInitialDataMatch = html.match(/var ytInitialData = (.*?);<\/script>/s);
+    // let ytInitialData = null;
+    // if (ytInitialDataMatch && ytInitialDataMatch[1]) {
+    //   ytInitialData = JSON.parse(ytInitialDataMatch[1]);
+    // }
 
-    // Extract ytInitialPlayerResponse
-    const ytInitialPlayerResponseMatch = html.match(/var ytInitialPlayerResponse = (.*?);<\/script>/s);
-    let ytInitialPlayerResponse = null;
-    if (ytInitialPlayerResponseMatch && ytInitialPlayerResponseMatch[1]) {
-      ytInitialPlayerResponse = JSON.parse(ytInitialPlayerResponseMatch[1]);
-    }
+    // // Extract ytInitialPlayerResponse
+    // const ytInitialPlayerResponseMatch = html.match(/var ytInitialPlayerResponse = (.*?);<\/script>/s);
+    // let ytInitialPlayerResponse = null;
+    // if (ytInitialPlayerResponseMatch && ytInitialPlayerResponseMatch[1]) {
+    //   ytInitialPlayerResponse = JSON.parse(ytInitialPlayerResponseMatch[1]);
+    // }
 
-    // Extract basic video details
-    const videoDetails = ytInitialPlayerResponse?.videoDetails || {};
-    const microformat = ytInitialPlayerResponse?.microformat?.playerMicroformatRenderer || {};
+    // // Extract basic video details
+    // const videoDetails = ytInitialPlayerResponse?.videoDetails || {};
+    // const microformat = ytInitialPlayerResponse?.microformat?.playerMicroformatRenderer || {};
 
-    // Extract owner info if available
-    const ownerProfile = ytInitialPlayerResponse?.videoDetails?.author || null;
-    const channelId = ytInitialPlayerResponse?.videoDetails?.channelId || null;
+    // // Extract owner info if available
+    // const ownerProfile = ytInitialPlayerResponse?.videoDetails?.author || null;
+    // const channelId = ytInitialPlayerResponse?.videoDetails?.channelId || null;
 
-    // Extract likes and dislikes from videoActions or other available fields
-    let likes = null;
-    try {
-      // Fallback: likes might be in videoDetails or other parts, but YouTube often hides dislikes
-      // So we try to find likes count in videoDetails or elsewhere
-      if (ytInitialPlayerResponse?.videoDetails?.likeCount) {
-        likes = parseInt(ytInitialPlayerResponse.videoDetails.likeCount, 10);
-      }
-    } catch (e) {
-      // ignore errors
-    }
+    // // Extract likes and dislikes from videoActions or other available fields
+    // let likes = null;
+    // try {
+    //   // Fallback: likes might be in videoDetails or other parts, but YouTube often hides dislikes
+    //   // So we try to find likes count in videoDetails or elsewhere
+    //   if (ytInitialPlayerResponse?.videoDetails?.likeCount) {
+    //     likes = parseInt(ytInitialPlayerResponse.videoDetails.likeCount, 10);
+    //   }
+    // } catch (e) {
+    //   // ignore errors
+    // }
 
     //console.log(videoDetails);
+
+    let videoId = "";
+    try {
+      const parsedUrl = new URL(url);
+      if (parsedUrl.hostname.includes("youtu.be")) {
+        videoId = parsedUrl.pathname.slice(1);
+      } else if (parsedUrl.pathname.startsWith("/shorts/")) {
+        videoId = parsedUrl.pathname.split("/shorts/")[1]?.split(/[?&]/)[0] || "";
+      } else {
+        videoId = parsedUrl.searchParams.get("v") || "";
+      }
+    } catch {
+      videoId = "";
+    }
+    
     return {
       sourceUrl: url,
       has_audio: true,
       user: {
         username: "",
-        fullname: ownerProfile || "",
-        id: channelId || "",
+        fullname: "",
+        id: "",
         is_verified: false,
         total_media: 1,
         total_followers: 0,
       },
       video: {
-        id: videoDetails.videoId || "",
-        duration: (parseInt(videoDetails.lengthSeconds || "0", 10)) || 0,
-        thumbnail_url: videoDetails.thumbnail?.thumbnails?.[0]?.url || "",
+        id: videoId,
+        duration:  0,
+        thumbnail_url: "",
         video_url: url,
-        views: parseInt(videoDetails.viewCount || "0", 10),
-        plays: parseInt(videoDetails.viewCount || "0", 10),
-        timestamp: microformat.uploadDate
-          ? Math.floor(new Date(microformat.uploadDate).getTime() / 1000)
-          : 0,
-        caption: videoDetails.title || "",
+        views: 0,
+        plays: 0,
+        timestamp: 0,
+        caption:"",
       },
     };
-  } catch (e) {
-    return null;
-  }
+  // } catch (e) {
+  //   return null;
+  // }
 }
 
 

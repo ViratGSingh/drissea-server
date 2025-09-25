@@ -215,14 +215,17 @@ export async function fetchYouTubeVideoData(url: string): Promise<any> {
     //console.log(videoDetails);
 
     let videoId = "";
-    const vMatch = url.match(/[?&]v=([^&]+)/);
-    if (vMatch && vMatch[1]) {
-      videoId = vMatch[1];
-    } else {
-      const shortMatch = url.match(/youtu\.be\/([^?&]+)/);
-      if (shortMatch && shortMatch[1]) {
-        videoId = shortMatch[1];
+    try {
+      const parsedUrl = new URL(url);
+      if (parsedUrl.hostname.includes("youtu.be")) {
+        videoId = parsedUrl.pathname.slice(1);
+      } else if (parsedUrl.pathname.startsWith("/shorts/")) {
+        videoId = parsedUrl.pathname.split("/shorts/")[1]?.split(/[?&]/)[0] || "";
+      } else {
+        videoId = parsedUrl.searchParams.get("v") || "";
       }
+    } catch {
+      videoId = "";
     }
     return {
       sourceUrl: url,
