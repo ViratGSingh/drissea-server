@@ -119,7 +119,7 @@ export class DevExtractAllVideoData extends OpenAPIRoute {
         const videoId = video?.video?.id ?? "";
         const sourceUrl = video?.sourceUrl ?? "";
 
-        if (sourceUrl.includes("youtube") || sourceUrl.includes("youtu.be")) {
+        if ((sourceUrl.includes("youtube") || sourceUrl.includes("youtu.be")) && videoId!="") {
           const docRef = firestore.collection("yt-videos").doc(videoId);
           const doc = await docRef.get();
           if (doc.exists) {

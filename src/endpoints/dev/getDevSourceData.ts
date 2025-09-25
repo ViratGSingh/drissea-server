@@ -213,6 +213,17 @@ export async function fetchYouTubeVideoData(url: string): Promise<any> {
     // }
 
     //console.log(videoDetails);
+
+    let videoId = "";
+    const vMatch = url.match(/[?&]v=([^&]+)/);
+    if (vMatch && vMatch[1]) {
+      videoId = vMatch[1];
+    } else {
+      const shortMatch = url.match(/youtu\.be\/([^?&]+)/);
+      if (shortMatch && shortMatch[1]) {
+        videoId = shortMatch[1];
+      }
+    }
     return {
       sourceUrl: url,
       has_audio: true,
@@ -225,7 +236,7 @@ export async function fetchYouTubeVideoData(url: string): Promise<any> {
         total_followers: 0,
       },
       video: {
-        id: "",
+        id: videoId,
         duration:  0,
         thumbnail_url: "",
         video_url: url,
