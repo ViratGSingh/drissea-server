@@ -119,8 +119,9 @@ export class DevExtractAllVideoData extends OpenAPIRoute {
         const videoId = video?.video?.id ?? "";
         const sourceUrl = video?.sourceUrl ?? "";
 
-        if ((sourceUrl.includes("youtube") || sourceUrl.includes("youtu.be")) && videoId!="") {
-          const docRef = firestore.collection("yt-videos").doc(videoId);
+        if (sourceUrl.includes("youtube") || sourceUrl.includes("youtu.be")) {
+          
+          const docRef = firestore.collection("yt-videos").doc(videoId!=""?videoId:"emptyId");
           const doc = await docRef.get();
           if (doc.exists) {
             const data = doc.data() || {};
@@ -128,37 +129,38 @@ export class DevExtractAllVideoData extends OpenAPIRoute {
               ...video,
               video: {
                 ...video.video,
-                thumbnail_url: video.sourceUrl,
+                thumbnail_url: data.video?.thumbnail_url,
                 video_url: video.sourceUrl,
                 framewatch: "",
                 transcription: data.transcription ?? "",
               },
             };
-          } else {
-            const scrapeResponse = await fetch("https://scrape.serper.dev", {
-              method: "POST",
-              headers: {
-                "X-API-KEY": process.env.SERP_API_KEY || "",
-                "Content-Type": "application/json",
-              },
-              body: JSON.stringify({ url: sourceUrl }),
-            });
+          }
+          else {
+          const scrapeResponse = await fetch("https://scrape.serper.dev", {
+            method: "POST",
+            headers: {
+              "X-API-KEY": process.env.SERP_API_KEY || "",
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify({ url: sourceUrl }),
+          });
 
-            const scrapeJson: ScrapeJsonResponse = await scrapeResponse.json();
-            const transcriptionText = scrapeJson.text ?? "";
-            const ogImage = scrapeJson.metadata?.["og:image"]??"";
+          const scrapeJson: ScrapeJsonResponse = await scrapeResponse.json();
+          const transcriptionText = scrapeJson.text ?? "";
+          const ogImage = scrapeJson.metadata?.["og:image"] ?? "";
 
-            const resultVideo = {
-              ...video,
-              video: {
-                ...video.video,
-                thumbnail_url:ogImage,
-                video_url: video.sourceUrl,
-                framewatch: "",
-                transcription: transcriptionText,
-              },
-            };
-
+          const resultVideo = {
+            ...video,
+            video: {
+              ...video.video,
+              thumbnail_url: ogImage,
+              video_url: video.sourceUrl,
+              framewatch: "",
+              transcription: transcriptionText,
+            },
+          };
+          if (videoId != "") {
             await firestore
               .collection("yt-videos")
               .doc(videoId)
@@ -184,9 +186,10 @@ export class DevExtractAllVideoData extends OpenAPIRoute {
                 createdAt: new Date().toISOString(),
                 updatedAt: new Date().toISOString(),
               });
-              return resultVideo;
+          }
+          return resultVideo;
 
-            //Scraper to get text and use that as transcription
+          //Scraper to get text and use that as transcription
           }
         } else {
           if (videoId) {
