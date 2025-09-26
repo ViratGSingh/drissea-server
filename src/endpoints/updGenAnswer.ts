@@ -78,9 +78,18 @@ export class UpdGenAnswer extends OpenAPIRoute {
       });
       const data = await this.getValidatedData<typeof this.schema>();
       const { query, results } = data.body;
-
+      
+      let totalTokens = 0;
       const formattedSources = results
-        .map((r, i) => `(${i + 1}) Content Url:\n${r.url}\nContent:${r.title} ${r.snippet}`)
+        .map((r, i) => {
+          const tokens = r.title.length + r.snippet.length;
+          if (totalTokens + tokens > 125000) {
+            return null;
+          }
+          totalTokens += tokens;
+          return `(${i + 1}) Content Url:\n${r.url}\nContent:${r.title} ${r.snippet}`;
+        })
+        .filter(Boolean)
         .join("\n\n");
 
     //Set Basic User Context Data
@@ -209,7 +218,7 @@ ${formattedSources}
           },
         ],
         temperature: 0.3,
-        max_tokens: 1500,
+        max_completion_tokens: 1500,
         top_p: 0.95,
         stream: false,
       });

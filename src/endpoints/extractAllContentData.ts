@@ -7,6 +7,9 @@ import admin from "firebase-admin";
 
 type ScrapeJsonResponse = {
   text?: string;
+  metadata?: {
+    "og:image"?: string;
+  };
 };
 
 export class ExtractAllVideoData extends OpenAPIRoute {
@@ -113,11 +116,32 @@ export class ExtractAllVideoData extends OpenAPIRoute {
     const videosWithTranscription = await Promise.all(
       videos.map(async (video) => {
         // Extract video ID from video_url or link
-        const videoId = video?.video?.id ?? "";
+        let videoId = video?.video?.id ?? "";
         const sourceUrl = video?.sourceUrl ?? "";
 
         if (sourceUrl.includes("youtube") || sourceUrl.includes("youtu.be")) {
-          const docRef = firestore.collection("yt-videos").doc(videoId);
+          let updVideoId = "";
+          if (videoId == "") {
+            try {
+              const parsedUrl = new URL(video?.sourceUrl);
+              if (parsedUrl.hostname.includes("youtu.be")) {
+                updVideoId = parsedUrl.pathname.slice(1);
+              } else if (parsedUrl.pathname.startsWith("/shorts/")) {
+                updVideoId =
+                  parsedUrl.pathname.split("/shorts/")[1]?.split(/[?&]/)[0] ||
+                  "";
+              } else {
+                updVideoId = parsedUrl.searchParams.get("v") || "";
+              }
+            } catch {
+              updVideoId = "emptyId";
+            }
+            videoId = updVideoId;
+          }
+
+          const docRef = firestore
+            .collection("yt-videos")
+            .doc(videoId != "" ? videoId : "emptyId");
           const doc = await docRef.get();
           if (doc.exists) {
             const data = doc.data() || {};
@@ -125,6 +149,9 @@ export class ExtractAllVideoData extends OpenAPIRoute {
               ...video,
               video: {
                 ...video.video,
+                id:videoId,
+                thumbnail_url:
+                  data.video?.thumbnail_url ?? video?.video?.thumbnail_url,
                 video_url: video.sourceUrl,
                 framewatch: "",
                 transcription: data.transcription ?? "",
@@ -142,11 +169,13 @@ export class ExtractAllVideoData extends OpenAPIRoute {
 
             const scrapeJson: ScrapeJsonResponse = await scrapeResponse.json();
             const transcriptionText = scrapeJson.text ?? "";
+            const ogImage = scrapeJson.metadata?.["og:image"] ?? "";
 
             const resultVideo = {
               ...video,
               video: {
                 ...video.video,
+                thumbnail_url: ogImage,
                 video_url: video.sourceUrl,
                 framewatch: "",
                 transcription: transcriptionText,
@@ -178,7 +207,7 @@ export class ExtractAllVideoData extends OpenAPIRoute {
                 createdAt: new Date().toISOString(),
                 updatedAt: new Date().toISOString(),
               });
-              return resultVideo;
+            return resultVideo;
 
             //Scraper to get text and use that as transcription
           }
