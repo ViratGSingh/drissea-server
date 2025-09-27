@@ -215,8 +215,9 @@ ${data.body.previousQuestion || "N/A"}
 And the previous answer was:
 ${data.body.previousAnswer || "N/A"}
 
-When vague terms like "near me" or "around here" are used, replace them with the actual city or location details from the user context.
-When vague terms like "right now" are used, replace them with specific part of the day (e.g., "morning," "night") based on the user's current local time from the user context.`
+When vague terms like "near me" or "around here" are used, then replace them with the actual city or location details from the user context.
+When vague terms like "right now" are used, then replace them with specific part of the day (e.g., "morning," "night") based on the user's current local time from the user context.
+If the user already specifies a clear location or time in the query, do not alter or add extra context information — keep exactly what the user wrote.`
           },
           {
             role: "user",
