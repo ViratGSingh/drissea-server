@@ -38,6 +38,7 @@ import { DevGetAllSourceData } from "./endpoints/dev/getDevSourceData.js";
 import { DevExtractAllVideoData } from "./endpoints/dev/extractDevlAllContentData.js";
 import { DevGenSerpData } from "./endpoints/dev/devGenSerpData.js";
 import { DevGenAnswer } from "./endpoints/dev/devGenAnswer.js";
+import { GenGeneralSearchQuery } from "./endpoints/dev/devGenGeneralQuery.js";
 
 // Start a Hono app
 const app = new Hono<{ Bindings: Env }>();
@@ -80,7 +81,7 @@ openapi.post("/api/recall/sources", UpdGetRecallData);
 
 
 //Dev General Search APIs
-openapi.post("/api/generate/query", UpdGenSearchQuery);
+openapi.post("/dev/api/generate/query/general", GenGeneralSearchQuery);
 openapi.get("/dev/api/search/source/general", DevGenSerpData);
 openapi.post("/api/fetch/source", AltGetSourceData);
 openapi.post("/dev/api/generate/answer/general", DevGenAnswer);
