@@ -17,6 +17,7 @@ export class UpdGenSearchQuery extends OpenAPIRoute {
               task: Str(),
               previousQuestion: z.string().optional(),
               previousAnswer: z.string().optional(),
+              isSearchMode: z.boolean().optional(),
             }),
           },
         },
@@ -86,7 +87,7 @@ export class UpdGenSearchQuery extends OpenAPIRoute {
     const data = await this.getValidatedData<typeof this.schema>();
     const task = data.body.task;
 
-    //Set Basic User Context Data 
+    //Set Basic User Context Data
     const clientIp =
       c.req.header("x-forwarded-for")?.split(",")[0]?.trim() ||
       c.req.header("cf-connecting-ip") ||
@@ -95,19 +96,19 @@ export class UpdGenSearchQuery extends OpenAPIRoute {
       "";
     let countryCode = "in";
     let userContext = "";
-    let  ipJson: {
-        city?: string;
-        region?: string;
-        country_name?: string;
-        country_code?: string;
-        timezone?: string;
-        org?: string;
-        postal?: string;
-        latitude?: number;
-        longitude?: number;
-        ip?: string;
-        error?: string;
-      }
+    let ipJson: {
+      city?: string;
+      region?: string;
+      country_name?: string;
+      country_code?: string;
+      timezone?: string;
+      org?: string;
+      postal?: string;
+      latitude?: number;
+      longitude?: number;
+      ip?: string;
+      error?: string;
+    };
     try {
       let ipapiUrl = `https://ipapi.co`;
       if (clientIp) {
@@ -129,7 +130,9 @@ export class UpdGenSearchQuery extends OpenAPIRoute {
         ip?: string;
         error?: string;
       } = await ipRes.json();
-      countryCode = ipJson.country_code ? ipJson.country_code.toLowerCase() : "in";
+      countryCode = ipJson.country_code
+        ? ipJson.country_code.toLowerCase()
+        : "in";
       // Extract all relevant fields
       const {
         city,
@@ -141,16 +144,16 @@ export class UpdGenSearchQuery extends OpenAPIRoute {
         postal,
         latitude,
         longitude,
-        ip
+        ip,
       } = ipJson;
       // Compute local datetime string
       let datetimeStr = "";
       if (timezone) {
         try {
-          datetimeStr = new Intl.DateTimeFormat('en-US', {
-            dateStyle: 'full',
-            timeStyle: 'long',
-            timeZone: timezone
+          datetimeStr = new Intl.DateTimeFormat("en-US", {
+            dateStyle: "full",
+            timeStyle: "long",
+            timeZone: timezone,
           }).format(new Date());
         } catch (e) {
           datetimeStr = "";
@@ -163,12 +166,24 @@ export class UpdGenSearchQuery extends OpenAPIRoute {
         (region ? `Region: ${region}\n` : "") +
         (city ? `City: ${city}\n` : "") +
         (timezone ? `Timezone: ${timezone}\n` : "") +
-        (datetimeStr && timezone ? `Date: ${new Intl.DateTimeFormat(undefined, { dateStyle: 'full', timeZone: timezone }).format(new Date())}\n` : "") +
-        (datetimeStr && timezone ? `Time: ${new Intl.DateTimeFormat(undefined, { timeStyle: 'long', timeZone: timezone }).format(new Date())}\n` : "") +
+        (datetimeStr && timezone
+          ? `Date: ${new Intl.DateTimeFormat(undefined, {
+              dateStyle: "full",
+              timeZone: timezone,
+            }).format(new Date())}\n`
+          : "") +
+        (datetimeStr && timezone
+          ? `Time: ${new Intl.DateTimeFormat(undefined, {
+              timeStyle: "long",
+              timeZone: timezone,
+            }).format(new Date())}\n`
+          : "") +
         (org ? `ISP/Org: ${org}\n` : "") +
         (ip ? `IP: ${ip}\n` : "") +
         (postal ? `Postal: ${postal}\n` : "") +
-        (latitude && longitude ? `Approximate Coordinates: ${latitude},${longitude}\n` : "");
+        (latitude && longitude
+          ? `Approximate Coordinates: ${latitude},${longitude}\n`
+          : "");
       userContext = userContext.trim();
       if (!userContext) userContext = "";
     } catch (err) {
@@ -176,7 +191,6 @@ export class UpdGenSearchQuery extends OpenAPIRoute {
       countryCode = "in";
       userContext = "User context unavailable";
     }
-
 
     if (!task || typeof task !== "string" || task.trim() === "") {
       return c.json(
@@ -189,35 +203,57 @@ export class UpdGenSearchQuery extends OpenAPIRoute {
 
     try {
       const chatCompletion = await groq.chat.completions.create({
-        model: "llama-3.3-70b-versatile",
+        model: "gemma2-9b-it",
         messages: [
           {
             role: "system",
-            content: `You are an Instagram video search query generator.
+            content: 
+                      data.body.isSearchMode==true?
+                      `You are a search query generator.
 
-Your job: rewrite the user's request into ONE short, high-impact search query that captures the main subject.
+                      Your job: rewrite the user's request in a concise natural-language description of the user’s web research goal, including guidance on reliable sources or freshness when relevant. Keep it under 256 characters.
+                      AlWAYS start the query with an action verb such as "Find," "Get," "List," etc.
 
-Rules:
-Be like a top Google searcher.
-Remove unnecessary details, adjectives, and filler words.
-Avoid any mention of content medium (like reels, videos, posts).
-Use only the exact words and spellings provided in the user's request, without altering or modifying any terms.
-Do not add, remove, or substitute any words unless explicitly present in the user's input.
-Ensure the query is concise and directly reflects the main subject of the request.
-Provide only the search query as the response, nothing else.
+                      Additionally, you have the following user context:
+                      ${userContext}
 
-Additionally, you have the following user context:
-${userContext}
+                      The user previously asked:
+                      ${data.body.previousQuestion || "N/A"}
 
-The user previously asked:
-${data.body.previousQuestion || "N/A"}
+                      And the previous answer was:
+                      ${data.body.previousAnswer || "N/A"}
 
-And the previous answer was:
-${data.body.previousAnswer || "N/A"}
+                      When location-specific vague terms (like "near me", "around here", "close by") are used, replace them with the actual city or location details from the user context. 
+                      DO NOT apply this rule to pronouns (e.g., "they", "we", "people") or general vague language about people or concepts.
+                      When vague terms like "right now" are used, then replace them with specific part of the day (e.g., "morning," "night") based on the user's current local time from the user context.
+                      If the user already specifies a clear location or time in the query, do not alter or add extra context information — keep exactly what the user wrote.`
+                      :
+                      `You are an Instagram video search query generator.
 
-When vague terms like "near me" or "around here" are used, then replace them with the actual city or location details from the user context.
-When vague terms like "right now" are used, then replace them with specific part of the day (e.g., "morning," "night") based on the user's current local time from the user context.
-If the user already specifies a clear location or time in the query, do not alter or add extra context information — keep exactly what the user wrote.`
+                      Your job: rewrite the user's request into ONE short, high-impact search query that captures the main subject.
+
+                      Rules:
+                      Be like a top Google searcher.
+                      Remove unnecessary details, adjectives, and filler words.
+                      Avoid any mention of content medium (like reels, videos, posts).
+                      Use only the exact words and spellings provided in the user's request, without altering or modifying any terms.
+                      Do not add, remove, or substitute any words unless explicitly present in the user's input.
+                      Ensure the query is concise and directly reflects the main subject of the request.
+                      Provide only the search query as the response, nothing else.
+
+                      Additionally, you have the following user context:
+                      ${userContext}
+
+                      The user previously asked:
+                      ${data.body.previousQuestion || "N/A"}
+
+                      And the previous answer was:
+                      ${data.body.previousAnswer || "N/A"}
+
+                      When location-specific vague terms (like "near me", "around here", "close by") are used, replace them with the actual city or location details from the user context. 
+                      Do not apply this rule to pronouns (e.g., "they", "we", "people") or general vague language about people or concepts.
+                      When vague terms like "right now" are used, then replace them with specific part of the day (e.g., "morning," "night") based on the user's current local time from the user context.
+                      If the user already specifies a clear location or time in the query, do not alter or add extra context information — keep exactly what the user wrote.`,
           },
           {
             role: "user",
@@ -231,7 +267,7 @@ If the user already specifies a clear location or time in the query, do not alte
         stop: null,
       });
 
-      const query = (chatCompletion.choices[0]?.message?.content??"").trim();
+      const query = (chatCompletion.choices[0]?.message?.content ?? "").trim();
 
       return c.json({
         query,
