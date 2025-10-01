@@ -1,7 +1,7 @@
 import { OpenAPIRoute, Str } from "chanfana";
 import { z } from "zod";
 import { type AppContext } from "../types.js";
-import 'dotenv/config';
+import "dotenv/config";
 import admin from "firebase-admin";
 
 export class GetSessionData extends OpenAPIRoute {
@@ -10,7 +10,9 @@ export class GetSessionData extends OpenAPIRoute {
     summary: "Get Drissea Session Data",
     request: {
       query: z.object({
-        sessionId: z.string().describe("Document ID of the session in the sessions collection"),
+        sessionId: z
+          .string()
+          .describe("Document ID of the session in the sessions collection"),
       }),
     },
     responses: {
@@ -35,6 +37,7 @@ export class GetSessionData extends OpenAPIRoute {
                 contentDuration: z.number(),
                 createdAt: z.string(),
                 updatedAt: z.string(),
+                isSearchMode: z.boolean().optional(),
               }),
             }),
           },
@@ -71,7 +74,9 @@ export class GetSessionData extends OpenAPIRoute {
     try {
       if (!admin.apps.length) {
         admin.initializeApp({
-          credential: admin.credential.cert(require("../../serviceAccountKey.json")),
+          credential: admin.credential.cert(
+            require("../../serviceAccountKey.json")
+          ),
         });
       }
       const docRef = admin.firestore().collection("sessions").doc(sessionId);
@@ -86,7 +91,7 @@ export class GetSessionData extends OpenAPIRoute {
       // Compose the session object with all expected fields
       const session = {
         sessionId: doc.id,
-        email: sessionData?.email??"",
+        email: sessionData?.email ?? "",
         sourceUrls: sessionData?.sourceUrls ?? [],
         videos: sessionData?.videos ?? [],
         questions: sessionData?.questions ?? [],
@@ -99,6 +104,7 @@ export class GetSessionData extends OpenAPIRoute {
         contentDuration: sessionData?.contentDuration ?? 0,
         createdAt: sessionData?.createdAt ?? "",
         updatedAt: sessionData?.updatedAt ?? "",
+        isSearchMode: sessionData?.isSearchMode ?? false,
       };
       return c.json(
         {

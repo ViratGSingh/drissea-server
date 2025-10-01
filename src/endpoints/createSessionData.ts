@@ -25,6 +25,7 @@ export class CreateSessionData extends OpenAPIRoute {
               email:z.string(),
               extractDuration: z.number(),
               contentDuration: z.number(),
+              isSearchMode: z.boolean().optional()
             }),
           },
         },
