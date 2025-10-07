@@ -190,7 +190,7 @@ Here’s the video content:
 ${formattedSources}`;
 
       const chatCompletion = await groq.chat.completions.create({
-        model: "qwen/qwen3-32b",
+        model: "moonshotai/kimi-k2-instruct-0905",
         messages: [
           {
             role: "system",
