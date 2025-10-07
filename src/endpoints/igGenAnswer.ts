@@ -190,7 +190,7 @@ Here’s the video content:
 ${formattedSources}`;
 
       const chatCompletion = await groq.chat.completions.create({
-        model: "openai/gpt-oss-120b",
+        model: "qwen/qwen3-32b",
         messages: [
           {
             role: "system",
