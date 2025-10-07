@@ -206,7 +206,7 @@ ${formattedSources}
 `;
 
       const chatCompletion = await groq.chat.completions.create({
-        model: "deepseek-r1-distill-llama-70b", //"openai/gpt-oss-120b"
+        model: "openai/gpt-oss-120b",
         messages: [
           {
             role: "system",
