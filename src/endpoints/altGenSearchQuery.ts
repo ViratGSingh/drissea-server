@@ -83,6 +83,7 @@ export class UpdGenSearchQuery extends OpenAPIRoute {
         { status: 401 }
       );
     }
+    
 
     const data = await this.getValidatedData<typeof this.schema>();
     const task = data.body.task;
@@ -203,31 +204,31 @@ export class UpdGenSearchQuery extends OpenAPIRoute {
 
     try {
       const chatCompletion = await groq.chat.completions.create({
-        model: "gemma2-9b-it",
+        model: "llama-3.1-8b-instant",
         messages: [
           {
             role: "system",
             content: 
-                      data.body.isSearchMode==true?
-                      `You are a search query generator.
+                      // data.body.isSearchMode==true?
+                      // `You are a search query generator.
 
-                      Your job: rewrite the user's request in a concise natural-language description of the user’s web research goal, including guidance on reliable sources or freshness when relevant. Keep it under 256 characters.
-                      AlWAYS start the query with an action verb such as "Find," "Get," "List," etc.
+                      // Your job: rewrite the user's request in a concise natural-language description of the user’s web research goal, including guidance on reliable sources or freshness when relevant. Keep it under 256 characters.
+                      // AlWAYS start the query with an action verb such as "Find," "Get," "List," etc.
 
-                      Additionally, you have the following user context:
-                      ${userContext}
+                      // Additionally, you have the following user context:
+                      // ${userContext}
 
-                      The user previously asked:
-                      ${data.body.previousQuestion || "N/A"}
+                      // The user previously asked:
+                      // ${data.body.previousQuestion || "N/A"}
 
-                      And the previous answer was:
-                      ${data.body.previousAnswer || "N/A"}
+                      // And the previous answer was:
+                      // ${data.body.previousAnswer || "N/A"}
 
-                      When location-specific vague terms (like "near me", "around here", "close by") are used, replace them with the actual city or location details from the user context. 
-                      DO NOT apply this rule to pronouns (e.g., "they", "we", "people") or general vague language about people or concepts.
-                      When vague terms like "right now" are used, then replace them with specific part of the day (e.g., "morning," "night") based on the user's current local time from the user context.
-                      If the user already specifies a clear location or time in the query, do not alter or add extra context information — keep exactly what the user wrote.`
-                      :
+                      // When location-specific vague terms (like "near me", "around here", "close by") are used, replace them with the actual city or location details from the user context. 
+                      // DO NOT apply this rule to pronouns (e.g., "they", "we", "people") or general vague language about people or concepts.
+                      // When vague terms like "right now" are used, then replace them with specific part of the day (e.g., "morning," "night") based on the user's current local time from the user context.
+                      // If the user already specifies a clear location or time in the query, do not alter or add extra context information — keep exactly what the user wrote.`
+                      // :
                       `You are an Instagram video search query generator.
 
                       Your job: rewrite the user's request into ONE short, high-impact search query that captures the main subject.
@@ -275,7 +276,7 @@ export class UpdGenSearchQuery extends OpenAPIRoute {
       });
     } catch (error) {
       return c.json(
-        { error: "Failed to generate query", success: false },
+        { error: "Failed to generate query", success: false, message:error },
         { status: 500 }
       );
     }
