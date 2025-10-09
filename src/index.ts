@@ -39,6 +39,7 @@ import { DevExtractAllVideoData } from "./endpoints/dev/extractDevlAllContentDat
 import { DevGenSerpData } from "./endpoints/dev/devGenSerpData.js";
 import { DevGenAnswer } from "./endpoints/dev/devGenAnswer.js";
 import { GenGeneralSearchQuery } from "./endpoints/dev/devGenGeneralQuery.js";
+import { GetUserHistoryData } from "./endpoints/getUserHistoryData.js";
 
 // Start a Hono app
 const app = new Hono<{ Bindings: Env }>();
@@ -110,6 +111,7 @@ openapi.get("/api/recall/get", GetSessionRecallData);
 openapi.post("/api/user/create", CreateUserData);
 openapi.post("/api/user/update", UpdateUserData);
 openapi.get("/api/user/get", GetUserData);
+openapi.post("/api/user/search/history", GetUserHistoryData);
 
 //Other APIs
 openapi.get("/api/og-extract", OgExtract);
