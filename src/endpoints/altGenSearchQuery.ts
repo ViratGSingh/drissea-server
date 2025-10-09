@@ -204,65 +204,40 @@ export class UpdGenSearchQuery extends OpenAPIRoute {
 
     try {
       const chatCompletion = await groq.chat.completions.create({
-        model: "llama-3.1-8b-instant",
+        model: "openai/gpt-oss-20b",
         messages: [
           {
             role: "system",
-            content: 
-                      // data.body.isSearchMode==true?
-                      // `You are a search query generator.
+            content: `You are a focused search query generator.
 
-                      // Your job: rewrite the user's request in a concise natural-language description of the user’s web research goal, including guidance on reliable sources or freshness when relevant. Keep it under 256 characters.
-                      // AlWAYS start the query with an action verb such as "Find," "Get," "List," etc.
+Your only goal is to generate one short, clear, and effective search query based solely on the user's current task input.
 
-                      // Additionally, you have the following user context:
-                      // ${userContext}
+You can use the provided user information, previous question, and previous answer only to understand the context or meaning behind the current task — not to include or alter terms from them.
 
-                      // The user previously asked:
-                      // ${data.body.previousQuestion || "N/A"}
+Guidelines:
+- Return only a single search query.
+- Keep it natural, concise, and under 256 characters.
+- Do not add, remove, or modify any key terms from the task.
+- Ignore adjectives, filler words, or irrelevant details.
+- Do not mention any content formats (like videos, reels, posts).
+- The output must only contain the search query text — nothing else.
 
-                      // And the previous answer was:
-                      // ${data.body.previousAnswer || "N/A"}
+User context:
+${userContext}
 
-                      // When location-specific vague terms (like "near me", "around here", "close by") are used, replace them with the actual city or location details from the user context. 
-                      // DO NOT apply this rule to pronouns (e.g., "they", "we", "people") or general vague language about people or concepts.
-                      // When vague terms like "right now" are used, then replace them with specific part of the day (e.g., "morning," "night") based on the user's current local time from the user context.
-                      // If the user already specifies a clear location or time in the query, do not alter or add extra context information — keep exactly what the user wrote.`
-                      // :
-                      `You are an Instagram video search query generator.
+Previous question:
+${data.body.previousQuestion || "N/A"}
 
-                      Your job: rewrite the user's request into ONE short, high-impact search query that captures the main subject.
-
-                      Rules:
-                      Be like a top Google searcher.
-                      Remove unnecessary details, adjectives, and filler words.
-                      Avoid any mention of content medium (like reels, videos, posts).
-                      Use only the exact words and spellings provided in the user's request, without altering or modifying any terms.
-                      Do not add, remove, or substitute any words unless explicitly present in the user's input.
-                      Ensure the query is concise and directly reflects the main subject of the request.
-                      Provide only the search query as the response, nothing else.
-
-                      Additionally, you have the following user context:
-                      ${userContext}
-
-                      The user previously asked:
-                      ${data.body.previousQuestion || "N/A"}
-
-                      And the previous answer was:
-                      ${data.body.previousAnswer || "N/A"}
-
-                      When location-specific vague terms (like "near me", "around here", "close by") are used, replace them with the actual city or location details from the user context. 
-                      Do not apply this rule to pronouns (e.g., "they", "we", "people") or general vague language about people or concepts.
-                      When vague terms like "right now" are used, then replace them with specific part of the day (e.g., "morning," "night") based on the user's current local time from the user context.
-                      If the user already specifies a clear location or time in the query, do not alter or add extra context information — keep exactly what the user wrote.`,
+Previous answer:
+${data.body.previousAnswer || "N/A"}`,
           },
           {
             role: "user",
             content: task,
           },
         ],
-        temperature: 1,
-        max_completion_tokens: 256,
+        temperature: 0,
+        //max_completion_tokens: 256,
         top_p: 1,
         stream: false,
         stop: null,
