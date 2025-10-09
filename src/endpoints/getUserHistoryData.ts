@@ -85,7 +85,9 @@ export class GetUserHistoryData extends OpenAPIRoute {
       id: doc.id,
       sourceUrls: data.sourceUrls || [],
       query: data.questions?.[0] || data.searchTerms?.[0] || "",
+      searchTerm: data.searchTerms?.[0] || "",
       answer: data.answers?.[0] || "",
+      createdAt: data.createdAt || "",
       isSearchMode: data.isSearchMode ?? false,
     };
   });
