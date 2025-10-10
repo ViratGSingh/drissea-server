@@ -231,34 +231,34 @@ export class ExtractAllVideoData extends OpenAPIRoute {
           }
 
           let framewatchText = "";
-          try {
-            const chatCompletion = await groq.chat.completions.create({
-              messages: [
-                {
-                  role: "user",
-                  content: [
-                    {
-                      type: "text",
-                      text: "Describe this image vivdly in detail, mention each and every detail and text written in it",
-                    },
-                    {
-                      type: "image_url",
-                      image_url: { url: video.video.thumbnail_url },
-                    },
-                  ],
-                },
-              ],
-              model: "meta-llama/llama-4-scout-17b-16e-instruct",
-              temperature: 1,
-              max_completion_tokens: 1024,
-              top_p: 1,
-              stream: false,
-              stop: null,
-            });
-            framewatchText = chatCompletion.choices[0].message.content ?? "";
-          } catch {
-            framewatchText = "";
-          }
+          // try {
+          //   const chatCompletion = await groq.chat.completions.create({
+          //     messages: [
+          //       {
+          //         role: "user",
+          //         content: [
+          //           {
+          //             type: "text",
+          //             text: "Describe this image vivdly in detail, mention each and every detail and text written in it",
+          //           },
+          //           {
+          //             type: "image_url",
+          //             image_url: { url: video.video.thumbnail_url },
+          //           },
+          //         ],
+          //       },
+          //     ],
+          //     model: "meta-llama/llama-4-scout-17b-16e-instruct",
+          //     temperature: 1,
+          //     max_completion_tokens: 1024,
+          //     top_p: 1,
+          //     stream: false,
+          //     stop: null,
+          //   });
+          //   framewatchText = chatCompletion.choices[0].message.content ?? "";
+          // } catch {
+          //   framewatchText = "";
+          // }
 
           if (
             !video.has_audio &&
