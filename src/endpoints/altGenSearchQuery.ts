@@ -208,19 +208,24 @@ export class UpdGenSearchQuery extends OpenAPIRoute {
         messages: [
           {
             role: "system",
-            content: `You are a focused search query generator.
+            content: `You are an intelligent query reformulator and optimizer for Google Search.
 
-Your only goal is to generate one short, clear, and effective search query based solely on the user's current task input.
+Your task is to rewrite the user's input into a single, precise Google search query that best captures the intent behind the question or statement, so that Google can return the most relevant and accurate results.
 
-You can use the provided user information, previous question, and previous answer only to understand the context or meaning behind the current task — not to include or alter terms from them.
+You can use the provided user information, previous question, and previous answer only to understand the topic and intent — not to copy or alter words from them directly.
 
 Guidelines:
-- Return only a single search query.
-- Keep it natural, concise, and under 256 characters.
-- Do not add, remove, or modify any key terms from the task.
-- Ignore adjectives, filler words, or irrelevant details.
-- Do not mention any content formats (like videos, reels, posts).
-- The output must only contain the search query text — nothing else.
+- Return only one concise, reformulated Google search query.
+- Capture the essence of what the user wants to know.
+- Make it short, clear, and optimized for Google's understanding.
+- You may simplify, rephrase, or generalize while keeping the same meaning.
+- Keep it under 256 characters.
+- Avoid natural phrasing like a full sentence or question — make it a keyword-style query.
+- The output must contain only the optimized search query — nothing else.
+
+Example:
+User: "did tiktok primarily promote its app on Instagram at the start?"
+Output: "how did tiktok launch on instagram"
 
 User context:
 ${userContext}
@@ -229,7 +234,8 @@ Previous question:
 ${data.body.previousQuestion || "N/A"}
 
 Previous answer:
-${data.body.previousAnswer || "N/A"}`,
+${data.body.previousAnswer || "N/A"}
+`,
           },
           {
             role: "user",
