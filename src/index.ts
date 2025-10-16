@@ -42,6 +42,7 @@ import { GenGeneralSearchQuery } from "./endpoints/dev/devGenGeneralQuery.js";
 import { GetUserHistoryData } from "./endpoints/getUserHistoryData.js";
 import { DevAnswerSimilarity } from "./endpoints/dev/devVideoAnswerSimilarity.js";
 import { GenAnswerSimilarity } from "./endpoints/genVideoAnswerSimilarity.js";
+import { SaveVideoThumbnail } from "./endpoints/saveVideoThumbnail.js";
 
 // Start a Hono app
 const app = new Hono<{ Bindings: Env }>();
@@ -83,6 +84,7 @@ openapi.post("/api/recall/answer", GenRecallAnswer);
 openapi.post("/api/recall/sources", UpdGetRecallData);
 openapi.post("/api/answer/similarity/social", GenAnswerSimilarity);
 openapi.post("/dev/api/answer/similarity/social", DevAnswerSimilarity);
+openapi.post("/api/save/video/thumbnail", SaveVideoThumbnail);
 
 
 //Dev General Search APIs
