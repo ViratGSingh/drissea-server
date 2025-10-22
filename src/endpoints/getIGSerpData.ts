@@ -72,7 +72,7 @@ export interface YouTubeVideoResult {
   thumbnail: {
     static: string;
     rich?: string;
-  } | string;
+  } ;
 }
 
 export interface YouTubeShortsGroup {
@@ -508,9 +508,9 @@ export class GenIGSerpData extends OpenAPIRoute {
       const nativeYoutubeVideoData = (youtubeVideosJson?.video_results || [])
         .map((item: YouTubeVideoResult) => ({
           sourceUrl: item.link,
-          thumbnail_url: item.thumbnail,
-          video_url: item.thumbnail,
-          username: item.channel,
+          thumbnail_url: item.thumbnail?.static??"",
+          video_url: item.thumbnail?.rich??"",
+          username: item.channel.name??"",
           fullname: "",
           caption: `${item.title} | ${item.description}`,
         }));
