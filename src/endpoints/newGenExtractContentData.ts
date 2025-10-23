@@ -1,0 +1,446 @@
+import { OpenAPIRoute, Str } from "chanfana";
+import { z } from "zod";
+import { type AppContext } from "../types.js";
+import { Groq } from "groq-sdk";
+import "dotenv/config";
+import admin from "firebase-admin";
+import fsPromises from "fs/promises";
+import fs from "fs";
+import path from "path";
+import os from "os";
+import pLimit from "p-limit";
+import { Readable } from "stream";
+
+type ScrapeJsonResponse = {
+  text?: string;
+  metadata?: {
+    "og:image"?: string;
+  };
+};
+
+export class NewGenExtractVideoData extends OpenAPIRoute {
+  schema = {
+    tags: ["Transcribe All Video Data"],
+    summary: "Watch IG/YT video and transcribe its audio",
+    request: {
+      body: {
+        content: {
+          "application/json": {
+            schema: z.object({
+              videos: z.array(z.record(z.any())),
+            }),
+          },
+        },
+      },
+    },
+    responses: {
+      "200": {
+        description: "Successfully retrieved video and translation",
+        content: {
+          "application/json": {
+            schema: z.object({
+              videoUrl: Str(),
+              translatedText: Str(),
+            }),
+          },
+        },
+      },
+      "400": {
+        description: "Missing or invalid searchId parameter",
+        content: {
+          "application/json": {
+            schema: z.object({
+              series: z.object({
+                error: Str(),
+              }),
+            }),
+          },
+        },
+      },
+      "404": {
+        description: "Document not found",
+        content: {
+          "application/json": {
+            schema: z.object({
+              series: z.object({
+                error: Str(),
+              }),
+            }),
+          },
+        },
+      },
+      "500": {
+        description: "Internal server error",
+        content: {
+          "application/json": {
+            schema: z.object({
+              series: z.object({
+                error: Str(),
+              }),
+            }),
+          },
+        },
+      },
+    },
+  };
+
+  async handle(c: AppContext) {
+    // Authorization check
+    const authHeader = c.req.header("Authorization");
+    if (!authHeader || authHeader !== `Bearer ${process.env.API_SECRET}`) {
+      return c.json(
+        {
+          success: false,
+          error: "Unauthorized",
+        },
+        { status: 401 }
+      );
+    }
+
+    if (!admin.apps.length) {
+      admin.initializeApp({
+        credential: admin.credential.cert(
+          require("../../serviceAccountKey.json")
+        ),
+      });
+    }
+
+    const data = await this.getValidatedData<typeof this.schema>();
+    const videos = data.body.videos;
+
+    if (!Array.isArray(videos) || videos.length === 0) {
+      return c.json(
+        { error: "No videos provided", success: false },
+        { status: 400 }
+      );
+    }
+
+    const groq = new Groq({ apiKey: process.env.GROQ_API_KEY });
+    const firestore = admin.firestore();
+    const limit = pLimit(5); // concurrency limit
+
+    // Run all transcriptions in parallel with Promise.all
+    const videosWithTranscription = await Promise.all(
+      videos.map((video) =>
+        limit(async () => {
+          // Extract video ID from video_url or link
+          let videoId = video?.video?.id ?? "";
+          const sourceUrl = video?.sourceUrl ?? "";
+
+          if (sourceUrl.includes("youtube") || sourceUrl.includes("youtu.be")) {
+            let updVideoId = "";
+            if (videoId == "") {
+              try {
+                const parsedUrl = new URL(video?.sourceUrl);
+                if (parsedUrl.hostname.includes("youtu.be")) {
+                  updVideoId = parsedUrl.pathname.slice(1);
+                } else if (parsedUrl.pathname.startsWith("/shorts/")) {
+                  updVideoId =
+                    parsedUrl.pathname.split("/shorts/")[1]?.split(/[?&]/)[0] ||
+                    "";
+                } else {
+                  updVideoId = parsedUrl.searchParams.get("v") || "";
+                }
+              } catch {
+                updVideoId = "emptyId";
+              }
+              videoId = updVideoId;
+            }
+
+            const docRef = firestore
+              .collection("yt-videos")
+              .doc(videoId != "" ? videoId : "emptyId");
+            const doc = await docRef.get();
+            if (doc.exists) {
+              const data = doc.data() || {};
+              return {
+                ...video,
+                video: {
+                  ...video.video,
+                  id: videoId,
+                  thumbnail_url:
+                    data.video?.thumbnail_url ?? video?.video?.thumbnail_url,
+                  video_url: video.sourceUrl,
+                  framewatch: "",
+                  transcription: data.transcription ?? "",
+                },
+              };
+            } else {
+              const scrapeResponse = await fetch("https://scrape.serper.dev", {
+                method: "POST",
+                headers: {
+                  "X-API-KEY": process.env.SERP_API_KEY || "",
+                  "Content-Type": "application/json",
+                },
+                body: JSON.stringify({ url: sourceUrl }),
+              });
+
+              const scrapeJson: ScrapeJsonResponse =
+                await scrapeResponse.json();
+              const transcriptionText = scrapeJson.text ?? "";
+              const ogImage = scrapeJson.metadata?.["og:image"] ?? "";
+
+              const resultVideo = {
+                ...video,
+                video: {
+                  ...video.video,
+                  thumbnail_url: ogImage,
+                  video_url: video.sourceUrl,
+                  framewatch: "",
+                  transcription: transcriptionText,
+                },
+              };
+
+              await firestore
+                .collection("yt-videos")
+                .doc(videoId)
+                .set({
+                  sourceUrl: video?.sourceUrl ?? "",
+                  hasAudio: video?.has_audio ?? false,
+                  username: video?.user?.username ?? "",
+                  fullname: video?.user?.fullname ?? "",
+                  userId: video?.user?.id ?? "",
+                  isVerified: video?.user?.is_verified ?? false,
+                  totalMedia: video?.user?.total_media ?? 0,
+                  totalFollowers: video?.user?.total_followers ?? 0,
+                  videoId: video?.video?.id ?? "",
+                  duration: video?.video?.duration ?? 0,
+                  thumbnailUrl: video?.video?.thumbnail_url ?? "",
+                  videoUrl: video?.video?.video_url ?? "",
+                  views: video?.video?.views ?? 0,
+                  plays: video?.video?.plays ?? 0,
+                  timestamp: video?.video?.timestamp ?? 0,
+                  caption: video?.video?.caption ?? "",
+                  framewatch: "",
+                  transcription: transcriptionText,
+                  createdAt: new Date().toISOString(),
+                  updatedAt: new Date().toISOString(),
+                });
+              return resultVideo;
+
+              //Scraper to get text and use that as transcription
+            }
+          } else {
+            if (videoId) {
+              const docRef = firestore.collection("short-videos").doc(videoId);
+              const doc = await docRef.get();
+
+              if (doc.exists) {
+                const data = doc.data() || {};
+                return {
+                  ...video,
+                  video: {
+                    ...video.video,
+                    video_url: video.sourceUrl,
+                    framewatch: data.framewatch ?? "",
+                    transcription: data.transcription ?? "",
+                  },
+                };
+              }
+            }
+
+            let framewatchText = "";
+            // try {
+            //   const chatCompletion = await groq.chat.completions.create({
+            //     messages: [
+            //       {
+            //         role: "user",
+            //         content: [
+            //           {
+            //             type: "text",
+            //             text: "Describe this image vivdly in detail, mention each and every detail and text written in it",
+            //           },
+            //           {
+            //             type: "image_url",
+            //             image_url: { url: video.video.thumbnail_url },
+            //           },
+            //         ],
+            //       },
+            //     ],
+            //     model: "meta-llama/llama-4-scout-17b-16e-instruct",
+            //     temperature: 1,
+            //     max_completion_tokens: 1024,
+            //     top_p: 1,
+            //     stream: false,
+            //     stop: null,
+            //   });
+            //   framewatchText = chatCompletion.choices[0].message.content ?? "";
+            // } catch {
+            //   framewatchText = "";
+            // }
+
+            if (
+              !video.has_audio &&
+              !video.video?.video_url &&
+              (video.video.duration ?? 0) <= 10
+            ) {
+              // If no audio or no video_url or duration less than or equal to 10 seconds, skip transcription
+              const resultVideo = {
+                ...video,
+                video: {
+                  ...video.video,
+                  video_url: video.sourceUrl,
+                  transcription: "",
+                  framewatch: framewatchText,
+                },
+              };
+
+              await firestore
+                .collection("short-videos")
+                .doc(videoId)
+                .set({
+                  sourceUrl: video?.sourceUrl ?? "",
+                  hasAudio: video?.has_audio ?? false,
+                  username: video?.user?.username ?? "",
+                  fullname: video?.user?.fullname ?? "",
+                  userId: video?.user?.id ?? "",
+                  isVerified: video?.user?.is_verified ?? false,
+                  totalMedia: video?.user?.total_media ?? 0,
+                  totalFollowers: video?.user?.total_followers ?? 0,
+                  videoId: video?.video?.id ?? "",
+                  duration: video?.video?.duration ?? 0,
+                  thumbnailUrl: video?.video?.thumbnail_url ?? "",
+                  videoUrl: video?.video?.video_url ?? "",
+                  views: video?.video?.views ?? 0,
+                  plays: video?.video?.plays ?? 0,
+                  timestamp: video?.video?.timestamp ?? 0,
+                  caption: video?.video?.caption ?? 0,
+                  framewatch: framewatchText,
+                  transcription: "",
+                  createdAt: new Date().toISOString(),
+                  updatedAt: new Date().toISOString(),
+                });
+
+              return resultVideo;
+            }
+            try {
+              // Download video file locally
+              const tmpDir = os.tmpdir();
+              const fileName = `video_${videoId}_${Date.now()}`;
+              const filePath = path.join(tmpDir, fileName);
+
+              try {
+                const response = await fetch(video.video.video_url);
+                if (!response.ok) {
+                  throw new Error(
+                    `Failed to download video: ${response.statusText}`
+                  );
+                }
+                const fileStream = fs.createWriteStream(filePath);
+                await new Promise<void>((resolve, reject) => {
+                  const nodeStream = Readable.fromWeb(response.body as any);
+                  nodeStream.pipe(fileStream);
+                  nodeStream.on("error", reject);
+                  fileStream.on("finish", resolve);
+                });
+
+                const transcriptResponse = await groq.audio.translations.create(
+                  {
+                    file: fs.createReadStream(filePath),
+                    model: "whisper-large-v3",
+                    response_format: "json",
+                    temperature: 0.0,
+                  }
+                );
+                const resultVideo = {
+                  ...video,
+                  video: {
+                    ...video.video,
+                    video_url: video.sourceUrl,
+                    transcription: transcriptResponse.text,
+                    framewatch: framewatchText,
+                  },
+                };
+                await firestore
+                  .collection("short-videos")
+                  .doc(videoId)
+                  .set({
+                    sourceUrl: video?.sourceUrl ?? "",
+                    hasAudio: video?.has_audio ?? false,
+                    username: video?.user?.username ?? "",
+                    fullname: video?.user?.fullname ?? "",
+                    userId: video?.user?.id ?? "",
+                    isVerified: video?.user?.is_verified ?? false,
+                    totalMedia: video?.user?.total_media ?? 0,
+                    totalFollowers: video?.user?.total_followers ?? 0,
+                    videoId: video?.video?.id ?? "",
+                    duration: video?.video?.duration ?? 0,
+                    thumbnailUrl: video?.video?.thumbnail_url ?? "",
+                    videoUrl: video?.video?.video_url ?? "",
+                    views: video?.video?.views ?? 0,
+                    plays: video?.video?.plays ?? 0,
+                    timestamp: video?.video?.timestamp ?? 0,
+                    caption: video?.video?.caption ?? 0,
+                    framewatch: framewatchText,
+                    transcription: transcriptResponse.text,
+                    createdAt: new Date().toISOString(),
+                    updatedAt: new Date().toISOString(),
+                  });
+
+                return resultVideo;
+              } finally {
+                // Clean up local file
+                try {
+                  await fsPromises.unlink(filePath);
+                } catch {
+                  // ignore unlink errors
+                }
+              }
+            } catch (error) {
+              // On error, return the video with transcription null and maybe an error message
+              const resultVideo = {
+                ...video,
+                video: {
+                  ...video.video,
+                  video_url: video.sourceUrl,
+                  transcription: "",
+                  framewatch: framewatchText,
+                },
+              };
+              if (videoId) {
+                await firestore
+                  .collection("short-videos")
+                  .doc(videoId)
+                  .set({
+                    sourceUrl: video?.sourceUrl ?? "",
+                    hasAudio: video?.has_audio ?? false,
+                    username: video?.user?.username ?? "",
+                    fullname: video?.user?.fullname ?? "",
+                    userId: video?.user?.id ?? "",
+                    isVerified: video?.user?.is_verified ?? false,
+                    totalMedia: video?.user?.total_media ?? 0,
+                    totalFollowers: video?.user?.total_followers ?? 0,
+                    videoId: video?.video?.id ?? "",
+                    duration: video?.video?.duration ?? 0,
+                    thumbnailUrl: video?.video?.thumbnail_url ?? "",
+                    videoUrl: video?.video?.video_url ?? "",
+                    views: video?.video?.views ?? 0,
+                    plays: video?.video?.plays ?? 0,
+                    timestamp: video?.video?.timestamp ?? 0,
+                    caption: video?.video?.caption ?? 0,
+                    framewatch: framewatchText,
+                    transcription: "",
+                    createdAt: new Date().toISOString(),
+                    updatedAt: new Date().toISOString(),
+                  });
+              }
+              return resultVideo;
+            }
+          }
+        })
+      )
+    );
+
+    return c.json({
+      data: videosWithTranscription,
+      success: true,
+    });
+  }
+}
+
+type Answer = {
+  created_at: string;
+  process: string;
+  reply: string;
+  source_links: string[];
+};
