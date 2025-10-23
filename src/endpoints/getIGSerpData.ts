@@ -470,7 +470,7 @@ export class GenIGSerpData extends OpenAPIRoute {
 
     try {
       // Fetch both APIs in parallel
-      const  [youtubeVideosJson,  altJson] = await Promise.all([
+      const  [youtubeVideosJson,  altJson, igVideosJson] = await Promise.all([
         fetch(
           `${altSerpUrl}?search_query=${encodeURIComponent(query)}&api_key=${
             process.env.ALT_SERP_API_KEY
@@ -495,13 +495,13 @@ export class GenIGSerpData extends OpenAPIRoute {
           }
         ).then((res) => res.json()) as Promise<AltSerpApiResponse>,
 
-        // fetch(`${igSerpUrl}?query=${encodeURIComponent(query)}`, {
-        //   method: "GET",
-        //   headers: {
-        //     "Content-Type": "application/json",
-        //     "x-access-key": "c9huvin8f1jm0xjk4e6ftg56t78ogc0s",
-        //   },
-        // }).then((res) => res.json()) as Promise<IGReelsApiResponse>,
+        fetch(`${igSerpUrl}?query=${encodeURIComponent(query)}`, {
+          method: "GET",
+          headers: {
+            "Content-Type": "application/json",
+            "x-access-key": "c9huvin8f1jm0xjk4e6ftg56t78ogc0s",
+          },
+        }).then((res) => res.json()) as Promise<IGReelsApiResponse>,
       ]);
 
       //Add Native YouTube Video
@@ -549,25 +549,27 @@ export class GenIGSerpData extends OpenAPIRoute {
           caption: item.title,
         }));
 
-      // // Process Instagram reels
-      // const nativeIGvVideoLinks = (igVideosJson?.reels_serp_modules || [])
-      //   .flatMap((module) => module.clips || [])
-      //   .map((clip) => {
-      //     const media = clip.media;
-      //     return {
-      //       sourceUrl: `https://instagram.com/reel/${media.id}`,
-      //       thumbnail_url: media.image_versions2?.candidates?.[0]?.url || "",
-      //       video_url: media.video_versions?.[0]?.url || "",
-      //       username: media.user.username,
-      //       fullname: media.user.full_name,
-      //       caption: media.caption?.text || "",
-      //     };
-      //   });
+      // Process Instagram reels
+      const nativeIGVideoLinks = (igVideosJson?.reels_serp_modules || [])
+        .flatMap((module) => module.clips || [])
+        .map((clip) => {
+          const media = clip.media;
+          return {
+            sourceUrl: `https://instagram.com/reel/${media.id}`,
+            thumbnail_url: media.image_versions2?.candidates?.[0]?.url || "",
+            video_url: media.video_versions?.[0]?.url || "",
+            username: media.user.username,
+            fullname: media.user.full_name,
+            caption: media.caption?.text || "",
+          };
+        });
+      
+
 
       return {
         query,
         data: {
-          "instagram":[...serpIGVideoLinks],
+          "instagram":[...serpIGVideoLinks, ...nativeIGVideoLinks],
           "youtube":[...serpYTVideoLinks, ...nativeYoutubeVideoData, ...nativeYoutubeShortVideoData]
         },
         //thumbnail_links: thumbnailLinks,
