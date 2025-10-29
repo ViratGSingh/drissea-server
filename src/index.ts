@@ -44,6 +44,11 @@ import { DevAnswerSimilarity } from "./endpoints/dev/devVideoAnswerSimilarity.js
 import { GenAnswerSimilarity } from "./endpoints/genVideoAnswerSimilarity.js";
 import { SaveVideoThumbnail } from "./endpoints/saveVideoThumbnail.js";
 import { NewGenExtractVideoData } from "./endpoints/newGenExtractContentData.js";
+import { WebSerpData } from "./endpoints/webSerpData.js";
+import { ShortVideosSerpData } from "./endpoints/shortVideosSerpData.js";
+import { VideosSerpData } from "./endpoints/videosSerpData.js";
+import { NewsSerpData } from "./endpoints/newsSerpData.js";
+import { ImagesSerpData } from "./endpoints/imagesSerpData.js";
 
 // Start a Hono app
 const app = new Hono<{ Bindings: Env }>();
@@ -74,6 +79,15 @@ openapi.post("/api/instagram/get/source", GetIgSourceData);
 openapi.post("/api/instagram/get/source/alt", AltGetIgSourceData);
 openapi.post("/api/instagram/backup/data", IGSaveVideoData);
 openapi.post("/api/instagram/gen/answer", IGGenAnswer);
+
+
+//Search APIs
+
+openapi.get("/api/search/web", WebSerpData);
+openapi.get("/api/search/videos/short", ShortVideosSerpData);
+openapi.get("/api/search/videos", VideosSerpData);
+openapi.get("/api/search/news", NewsSerpData);
+openapi.get("/api/search/images", ImagesSerpData);
 
 //New Approach APIs
 openapi.post("/api/generate/query", UpdGenSearchQuery);
