@@ -110,30 +110,30 @@ export class NewsSerpData extends OpenAPIRoute {
     let countryCode = gl ?? "in";
     let country = location ?? "India";
 
-    // // Get client IP from headers or connection, fallback to empty string
-    // const clientIp =
-    //   c.req.header("x-forwarded-for")?.split(",")[0]?.trim() ||
-    //   c.req.header("cf-connecting-ip") ||
-    //   // @ts-ignore
-    //   c.req.raw?.connection?.remoteAddress ||
-    //   "";
-    // try {
-    //   let ipapiUrl = "https://ipapi.co";
-    //   if (clientIp) {
-    //     ipapiUrl += `/${clientIp}/json/`;
-    //   } else {
-    //     ipapiUrl += "/json/";
-    //   }
-    //   const ipRes = await fetch(ipapiUrl);
-    //   const ipJson = (await ipRes.json()) as { country_code?: string; country_name?: string; error?: string };
-    //   countryCode = ipJson.country_code ? ipJson.country_code.toLowerCase() : "in";
-    //   country = ipJson.country_name ? ipJson.country_name : "India";
-    // } catch (err) {
-    //   // If ipapi fails, fallback to default countryCode
-    //   countryCode = "in";
-    //   country = "India";
-    //   console.log("ipapi failed, using fallback countryCode:", countryCode);
-    // }
+    // Get client IP from headers or connection, fallback to empty string
+    const clientIp =
+      c.req.header("x-forwarded-for")?.split(",")[0]?.trim() ||
+      c.req.header("cf-connecting-ip") ||
+      // @ts-ignore
+      c.req.raw?.connection?.remoteAddress ||
+      "";
+    try {
+      let ipapiUrl = "https://ipapi.co";
+      if (clientIp) {
+        ipapiUrl += `/${clientIp}/json/`;
+      } else {
+        ipapiUrl += "/json/";
+      }
+      const ipRes = await fetch(ipapiUrl);
+      const ipJson = (await ipRes.json()) as { country_code?: string; country_name?: string; error?: string };
+      countryCode = ipJson.country_code ? ipJson.country_code.toLowerCase() : "in";
+      country = ipJson.country_name ? ipJson.country_name : "India";
+    } catch (err) {
+      // If ipapi fails, fallback to default countryCode
+      countryCode = "in";
+      country = "India";
+      console.log("ipapi failed, using fallback countryCode:", countryCode);
+    }
 
     const serpUrl = "https://google.serper.dev/videos";
     const altSerpUrl = "https://serpapi.com/search";

@@ -49,6 +49,8 @@ import { ShortVideosSerpData } from "./endpoints/shortVideosSerpData.js";
 import { VideosSerpData } from "./endpoints/videosSerpData.js";
 import { NewsSerpData } from "./endpoints/newsSerpData.js";
 import { ImagesSerpData } from "./endpoints/imagesSerpData.js";
+import { CreateThreadData } from "./endpoints/createThreadData.js";
+import { UpdateThreadData } from "./endpoints/updateThreadData.js";
 
 // Start a Hono app
 const app = new Hono<{ Bindings: Env }>();
@@ -121,6 +123,12 @@ openapi.post("/dev/api/extract/source", DevExtractAllVideoData);
 openapi.post("/api/session/create", CreateSessionData);
 openapi.post("/api/session/update", UpdateSessionData);
 openapi.get("/api/session/get", GetSessionData);
+
+
+//Thread APIs
+openapi.post("/api/thread/create", CreateThreadData);
+openapi.post("/api/thread/update", UpdateThreadData);
+openapi.get("/api/thread/get", GetSessionData);
 
 //Recall APIs
 openapi.post("/api/recall/videos", GetRecallData);
