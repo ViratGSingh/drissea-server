@@ -8,6 +8,108 @@ interface WebSerpResponse {
   video_results?: [];
   news_results?: [];
   images_results?: [];
+  answer_box?: {
+    type: string;
+    title: string;
+    answer: string;
+    thumbnail?: string;
+  };
+  knowledge_graph?: {
+    title: string;
+    type: string;
+    description: string;
+    header_images?: {
+      image: string;
+      source: string;
+    }[];
+    // manager?: string;
+    // manager_links?: {
+    //   text: string;
+    //   link: string;
+    // }[];
+    // location?: string;
+    // location_links?: {
+    //   text: string;
+    //   link: string;
+    // }[];
+    // arena_stadium?: string;
+    // arena_stadium_links?: {
+    //   text: string;
+    //   link: string;
+    // }[];
+    // founded?: string;
+    // captain?: string;
+    // captain_links?: {
+    //   text: string;
+    //   link: string;
+    // }[];
+    // leagues?: string;
+    // leagues_links?: {
+    //   text: string;
+    //   link: string;
+    // }[];
+    // training_ground?: string;
+    // training_ground_links?: {
+    //   text: string;
+    //   link: string;
+    // }[];
+    // born?: string;
+    // born_links?: {
+    //   text: string;
+    //   link: string;
+    // }[];
+    // upcoming_movie?: string;
+    // upcoming_movie_links?: {
+    //   text: string;
+    //   link: string;
+    // }[];
+    // awards?: string;
+    // awards_links?: {
+    //   text: string;
+    //   link: string;
+    // }[];
+    // tv_shows?: string;
+    // tv_shows_links?: {
+    //   text: string;
+    //   link: string;
+    // }[];
+    // spouse?: string;
+    // spouse_links?: {
+    //   text: string;
+    //   link: string;
+    // }[];
+    movies?: {
+      extensions?: string[];
+      image: string;
+      // link: string;
+      // serpapi_link?: string;
+    }[];
+    movies_and_shows?: {
+      extensions?: string[];
+      image: string;
+      // link: string;
+      // serpapi_link?: string;
+    }[];
+    tv_shows?: {
+      extensions?: string[];
+      image: string;
+      // link: string;
+      // serpapi_link?: string;
+    }[];
+    video_games?: {
+      extensions?: string[];
+      image: string;
+      // link: string;
+      // serpapi_link?: string;
+    }[];
+    books?: {
+      extensions?: string[];
+      image: string;
+      // link: string;
+      // serpapi_link?: string;
+    }[];
+  };
+  
   organic_results?: {
     position: number;
     title: string;
@@ -177,9 +279,49 @@ export class WebSerpData extends OpenAPIRoute {
         ]);
 
       
+      
       return {
         query,
         //web_results: [...webLinks],
+        knowledge_graph: webJson?.knowledge_graph
+          ? {
+              title: webJson.knowledge_graph.title,
+              type: webJson.knowledge_graph.type,
+              description: webJson.knowledge_graph.description,
+              header_images: webJson.knowledge_graph.header_images?.map((hi) => ({
+                image: hi.image,
+                source: hi.source,
+              })),
+              movies: webJson.knowledge_graph.movies?.map((m) => ({
+                extensions: m.extensions,
+                image: m.image,
+              })),
+              movies_and_shows: webJson.knowledge_graph.movies_and_shows?.map((m) => ({
+                extensions: m.extensions,
+                image: m.image,
+              })),
+              tv_shows: webJson.knowledge_graph.tv_shows?.map((t) => ({
+                extensions: t.extensions,
+                image: t.image,
+              })),
+              video_games: webJson.knowledge_graph.video_games?.map((v) => ({
+                extensions: v.extensions,
+                image: v.image,
+              })),
+              books: webJson.knowledge_graph.books?.map((b) => ({
+                extensions: b.extensions,
+                image: b.image,
+              })),
+            }
+          : {},
+        answer_box: webJson?.answer_box
+          ? {
+              type: webJson.answer_box.type,
+              title: webJson.answer_box.title,
+              answer: webJson.answer_box.answer,
+              thumbnail: webJson.answer_box.thumbnail,
+            }
+          : {},
         data: webJson?.organic_results?.map(({ position, title, link, displayed_link, snippet }) => ({
           title,
           link,
