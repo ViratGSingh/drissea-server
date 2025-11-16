@@ -150,30 +150,31 @@ export class DevGenSerpData extends OpenAPIRoute {
       // const json = (await res.json()) as SerpApiResponse;
 
       //Get General
-      const altVideosRes = await fetch(
-        altSerpUrl,
-        {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            "x-api-key": process.env.PARALLEL_API_KEY ?? ""
-          },
-          body: JSON.stringify({
-            search_queries: [],
-            processor: "base",
-            objective: query,
-          }),
-        }
-      );
+      const altVideosRes = await fetch(altSerpUrl, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "x-api-key": process.env.PARALLEL_API_KEY ?? "",
+          
+        "parallel-beta": "search-extract-2025-10-10"
+        },
+        body: JSON.stringify({
+          mode: "one-shot",
+          search_queries: null,
+          max_results: 10,
+          objective: query,
+        }),
+      });
       const altVideosJson = (await altVideosRes.json()) as AltSerpApiResponse;
-      const genResultsData = (altVideosJson?.results || [])
-        .map(
-          (item: any): OrganicResult => ({
-            url: item.url,
-            title: item.title,
-            excerpts: Array.isArray(item.excerpts) ? item.excerpts.join(" ") : String(item.excerpts || ""),
-          })
-        );
+      const genResultsData = (altVideosJson?.results || []).map(
+        (item: any): OrganicResult => ({
+          url: item.url,
+          title: item.title,
+          excerpts: Array.isArray(item.excerpts)
+            ? item.excerpts.join(" ")
+            : String(item.excerpts || ""),
+        })
+      );
       // const thumbnailLinks = (json?.videos || [])
       //   .filter((item: any) => {
       //     const link = item.link || "";
