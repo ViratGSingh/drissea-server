@@ -165,7 +165,7 @@ export class NewsSerpData extends OpenAPIRoute {
         fetch(
           `${altSerpUrl}?q=${encodeURIComponent(query)}&api_key=${
             process.env.ALT_SERP_API_KEY
-          }&engine=google_news_light&gl=${countryCode}&location=${country}&device=mobile`,
+          }&engine=google_news_light&gl=${countryCode}&location=${country}&safe=off&device=mobile`,
           {
             method: "GET",
             headers: {

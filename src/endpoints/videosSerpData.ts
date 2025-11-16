@@ -166,7 +166,7 @@ export class VideosSerpData extends OpenAPIRoute {
         fetch(
           `${altSerpUrl}?q=${encodeURIComponent(query)}&api_key=${
             process.env.ALT_SERP_API_KEY
-          }&engine=google_videos_light&gl=${countryCode}&location=${country},`,
+          }&engine=google_videos_light&gl=${countryCode}&safe=off&location=${country},`,
           {
             method: "GET",
             headers: {

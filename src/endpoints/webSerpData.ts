@@ -22,91 +22,25 @@ interface WebSerpResponse {
       image: string;
       source: string;
     }[];
-    // manager?: string;
-    // manager_links?: {
-    //   text: string;
-    //   link: string;
-    // }[];
-    // location?: string;
-    // location_links?: {
-    //   text: string;
-    //   link: string;
-    // }[];
-    // arena_stadium?: string;
-    // arena_stadium_links?: {
-    //   text: string;
-    //   link: string;
-    // }[];
-    // founded?: string;
-    // captain?: string;
-    // captain_links?: {
-    //   text: string;
-    //   link: string;
-    // }[];
-    // leagues?: string;
-    // leagues_links?: {
-    //   text: string;
-    //   link: string;
-    // }[];
-    // training_ground?: string;
-    // training_ground_links?: {
-    //   text: string;
-    //   link: string;
-    // }[];
-    // born?: string;
-    // born_links?: {
-    //   text: string;
-    //   link: string;
-    // }[];
-    // upcoming_movie?: string;
-    // upcoming_movie_links?: {
-    //   text: string;
-    //   link: string;
-    // }[];
-    // awards?: string;
-    // awards_links?: {
-    //   text: string;
-    //   link: string;
-    // }[];
-    // tv_shows?: string;
-    // tv_shows_links?: {
-    //   text: string;
-    //   link: string;
-    // }[];
-    // spouse?: string;
-    // spouse_links?: {
-    //   text: string;
-    //   link: string;
-    // }[];
     movies?: {
       extensions?: string[];
       image: string;
-      // link: string;
-      // serpapi_link?: string;
     }[];
     movies_and_shows?: {
       extensions?: string[];
       image: string;
-      // link: string;
-      // serpapi_link?: string;
     }[];
     tv_shows?: {
       extensions?: string[];
       image: string;
-      // link: string;
-      // serpapi_link?: string;
     }[];
     video_games?: {
       extensions?: string[];
       image: string;
-      // link: string;
-      // serpapi_link?: string;
     }[];
     books?: {
       extensions?: string[];
       image: string;
-      // link: string;
-      // serpapi_link?: string;
     }[];
   };
   
@@ -263,7 +197,7 @@ export class WebSerpData extends OpenAPIRoute {
         fetch(
           `${altSerpUrl}?q=${encodeURIComponent(query)}&api_key=${
             process.env.ALT_SERP_API_KEY
-          }&engine=google_light&gl=${countryCode}&location=${country}&device=mobile`,
+          }&engine=google_light&gl=${countryCode}&location=${country}&safe=off&device=mobile`,
           {
             method: "GET",
             headers: {
