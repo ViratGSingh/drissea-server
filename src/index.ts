@@ -51,6 +51,11 @@ import { NewsSerpData } from "./endpoints/newsSerpData.js";
 import { ImagesSerpData } from "./endpoints/imagesSerpData.js";
 import { CreateThreadData } from "./endpoints/createThreadData.js";
 import { UpdateThreadData } from "./endpoints/updateThreadData.js";
+import { Pinecone } from "@pinecone-database/pinecone";
+import { PineconeSerpData } from "./endpoints/search/pineconeSerpData.js";
+import { SearchIgProfileData } from "./endpoints/searchIgProfileData.js";
+import { DrisseaSerpData } from "./endpoints/search/drisseaSerpData.js";
+import { AltGetSessionData } from "./endpoints/altGetSessionData.js";
 
 // Start a Hono app
 const app = new Hono<{ Bindings: Env }>();
@@ -84,12 +89,12 @@ openapi.post("/api/instagram/gen/answer", IGGenAnswer);
 
 
 //Search APIs
-
 openapi.get("/api/search/web", WebSerpData);
 openapi.get("/api/search/videos/short", ShortVideosSerpData);
 openapi.get("/api/search/videos", VideosSerpData);
 openapi.get("/api/search/news", NewsSerpData);
 openapi.get("/api/search/images", ImagesSerpData);
+openapi.get("/api/search/drissea", DrisseaSerpData);
 
 //New Approach APIs
 openapi.post("/api/generate/query", UpdGenSearchQuery);
@@ -117,6 +122,9 @@ openapi.post("/dev/api/fetch/source", DevGetAllSourceData);
 openapi.post("/dev/api/extract/source", DevExtractAllVideoData);
 
 
+//Creator APIs
+openapi.get("/api/creator/search", SearchIgProfileData);
+
 //openapi.post("/api/youtube/extract", YTExtractData);
 
 //Session APIs
@@ -128,7 +136,7 @@ openapi.get("/api/session/get", GetSessionData);
 //Thread APIs
 openapi.post("/api/thread/create", CreateThreadData);
 openapi.post("/api/thread/update", UpdateThreadData);
-openapi.get("/api/thread/get", GetSessionData);
+openapi.get("/api/thread/get", AltGetSessionData);
 
 //Recall APIs
 openapi.post("/api/recall/videos", GetRecallData);
