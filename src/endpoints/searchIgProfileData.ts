@@ -7,7 +7,7 @@ import admin from "firebase-admin";
 import { HttpsProxyAgent } from "https-proxy-agent";
 import axios from "axios";
 
-export class SearchIgProfileData extends OpenAPIRoute {
+export class SearchProfileData extends OpenAPIRoute {
   schema = {
     tags: ["Instagram Get Content Data"],
     summary: "Get IG content",
@@ -82,7 +82,7 @@ export class SearchIgProfileData extends OpenAPIRoute {
 
     const data = await this.getValidatedData<typeof this.schema>();
     const { query } = data.query;
-    const incomingCsrf = c.req.header("X-CSRFToken") ?? "agkp4EEB7u2wPNvvp9ztaZauxvdSgwrD";
+    const incomingCsrf = c.req.header("X-CSRFToken"); //?? "agkp4EEB7u2wPNvvp9ztaZauxvdSgwrD";
 
 
     const proxy_user = process.env.OXY_USERNAME;
@@ -154,7 +154,7 @@ export class SearchIgProfileData extends OpenAPIRoute {
     return c.json({
       success: true,
       query,
-      results,
+      data: results[0] ?? null,
     });
   }
 }
