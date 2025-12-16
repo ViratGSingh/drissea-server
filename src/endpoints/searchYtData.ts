@@ -142,17 +142,17 @@ export class YoutubeSearchData extends OpenAPIRoute {
       const data = await Promise.all(
         bestItems.map(async (bestItem: any) => {
           const videoId = bestItem.id.videoId;
-          const transcript = await getTranscript(videoId);
-          const fullTranscript = transcript || "";
-          const best = await extractBestExcerpt(fullTranscript, userQuery);
+          // const transcript = await getTranscript(videoId);
+          // const fullTranscript = transcript || "";
+          // const best = await extractBestExcerpt(fullTranscript, userQuery);
           
           return {
             videoId,
             title: bestItem.snippet.title,
             //transcript: fullTranscript,
-            startTimestamp: best.startTimestamp,
-            endTimestamp: best.endTimestamp,
-            snippet: `${best.excerpt}`,
+            startTimestamp: "0:00",
+            endTimestamp: "0:00",
+            snippet: `${bestItem.snippet.title}\n\n${bestItem.snippet.channelTitle}\n\n${bestItem.snippet.description}`,
             thumbnail: bestItem.snippet.thumbnails.high.url??bestItem.snippet.thumbnails.medium.url??bestItem.snippet.thumbnails.default.url,
             channelTitle: bestItem.snippet.channelTitle,
             channelId: bestItem.snippet.channelId,
