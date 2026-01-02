@@ -4,6 +4,7 @@ import { type AppContext } from "../../types.js";
 import "dotenv/config";
 import axios from "axios";
 import { Groq } from "groq-sdk";
+import Perplexity from "@perplexity-ai/perplexity_ai";
 
 const groq = new Groq({
   apiKey: process.env.GROQ_API_KEY || "",
@@ -15,10 +16,7 @@ type OrganicResult = {
   excerpts: string;
 };
 
-interface AltSerpApiResponse {
-  results?: OrganicResult[];
-  // Add other fields if needed, like `inline_videos?: { link: string }[]`
-}
+
 
 export class FastGenSerpData extends OpenAPIRoute {
   schema = {
@@ -104,45 +102,39 @@ export class FastGenSerpData extends OpenAPIRoute {
     }
     const data = await this.getValidatedData<typeof this.schema>();
     const { query, country } = data.body;
-
-    // Get client IP from headers or connection, fallback to empty string
-    const clientIp =
-      c.req.header("x-forwarded-for")?.split(",")[0]?.trim() ||
-      c.req.header("cf-connecting-ip") ||
-      // @ts-ignore
-      c.req.raw?.connection?.remoteAddress ||
-      "";
     
 
-    const altSerpUrl = "https://api.parallel.ai/v1beta/search";
+
 
     try {
       // Run web search, YouTube search, and Map search in parallel
       const [webSearchResult, youtubeSearchResult, mapSearchResult] = await Promise.all([
         // Web search
         (async () => {
-          const altVideosRes = await fetch(altSerpUrl, {
-            method: "POST",
-            headers: {
-              "Content-Type": "application/json",
-              "x-api-key": process.env.PARALLEL_API_KEY ?? "",
-              "parallel-beta": "search-extract-2025-10-10"
-            },
-            body: JSON.stringify({
-              mode: "one-shot",
-              search_queries: null,
-              max_results: 10,
-              objective: query,
-            }),
+          const perpxApiKey = process.env.PERPX_API_KEY || "";
+          
+          if (!perpxApiKey) {
+            console.warn("PERPX_API_KEY is not set");
+            return [];
+          }
+
+          const client = new Perplexity({
+            apiKey: perpxApiKey,
           });
-          const altVideosJson = (await altVideosRes.json()) as AltSerpApiResponse;
-          return (altVideosJson?.results || []).map(
+
+          const response = await client.search.create({
+            query: query,
+            max_results: 10,
+            max_tokens: 25000,
+            max_tokens_per_page: 2048,
+            country: country.toUpperCase() || "IN"
+          });
+          
+          return (response.results || []).map(
             (item: any): OrganicResult => ({
               url: item.url,
               title: item.title,
-              excerpts: Array.isArray(item.excerpts)
-                ? item.excerpts.join(" ")
-                : String(item.excerpts || ""),
+              excerpts: item.snippet || "",
             })
           );
         })(),
