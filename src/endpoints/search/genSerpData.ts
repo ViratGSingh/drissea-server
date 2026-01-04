@@ -28,6 +28,7 @@ export class FastGenSerpData extends OpenAPIRoute {
           "application/json": {
             schema: z.object({
               query: Str({description: "User query to understand and reply"}),
+              context: z.string().optional().describe("Background context for the query"),
               country: z.string(),
             }),
           },
@@ -101,10 +102,24 @@ export class FastGenSerpData extends OpenAPIRoute {
       );
     }
     const data = await this.getValidatedData<typeof this.schema>();
-    const { query, country } = data.body;
+    const { query, country, context } = data.body;
     
 
+    //Get query intent
+    const { intent, finalQuery, finalQueries} = await getQueryIntent(query, context);
 
+    if (intent === "chat" || !finalQuery) {
+       return {
+         query,
+         intent,
+         finalQuery,
+         finalQueries,
+         web: [],
+         youtube: [],
+         map: [],
+         success: true,
+       };
+    }
 
     try {
       // Run web search, YouTube search, and Map search in parallel
@@ -122,15 +137,37 @@ export class FastGenSerpData extends OpenAPIRoute {
             apiKey: perpxApiKey,
           });
 
-          const response = await client.search.create({
-            query: query,
-            max_results: 10,
-            max_tokens: 25000,
-            max_tokens_per_page: 2048,
-            country: country.toUpperCase() || "IN"
+          // Combine main query with variants, deduplicate, and filter empty
+          const allQueries = Array.from(new Set([finalQuery, ...finalQueries])).filter(q => q && q.trim().length > 0);
+
+          const searchPromises = allQueries.map(async (q) => {
+            try {
+              const response = await client.search.create({
+                query: q,
+                max_results: 5,
+                max_tokens: 2500,
+                max_tokens_per_page: 250,
+                country: country.toUpperCase() || "IN"
+              });
+              return response.results || [];
+            } catch (err) {
+              console.error(`Perplexity search failed for query "${q}":`, err);
+              return [];
+            }
           });
-          
-          return (response.results || []).map(
+
+          const resultsArrays = await Promise.all(searchPromises);
+          const allResults = resultsArrays.flat();
+
+          const seenUrls = new Set<string>();
+          const uniqueResults = allResults.filter((item: any) => {
+            if (!item.url || seenUrls.has(item.url)) return false;
+            if (!item.snippet || item.snippet.trim().length === 0) return false;
+            seenUrls.add(item.url);
+            return true;
+          });
+
+          return uniqueResults.map(
             (item: any): OrganicResult => ({
               url: item.url,
               title: item.title,
@@ -152,7 +189,7 @@ export class FastGenSerpData extends OpenAPIRoute {
               {
                 params: {
                   part: "snippet",
-                  q: query,
+                  q: finalQuery,
                   key: youtubeApiKey,
                   maxResults: 10,
                   type: "video",
@@ -164,8 +201,7 @@ export class FastGenSerpData extends OpenAPIRoute {
             const items = response.data.items || [];
             
             // Select best videos (max 3)
-            const bestVideoIds = await selectBestVideos(items, query);
-            const bestItems = items.filter((i: any) => bestVideoIds.includes(i.id.videoId));
+            const bestItems = items.slice(0, items.length>5?5:items.length);
             
             const videos = bestItems.map((bestItem: any) => ({
               videoId: bestItem.id.videoId,
@@ -194,7 +230,7 @@ export class FastGenSerpData extends OpenAPIRoute {
             }
 
             // Generate optimized map query
-            const mapQuery = await generateMapQuery(query);
+            const mapQuery = finalQuery;
 
             // Text Search
             const searchResponse = await axios.get(
@@ -247,6 +283,8 @@ export class FastGenSerpData extends OpenAPIRoute {
         web: webSearchResult,
         youtube: youtubeSearchResult,
         map: mapSearchResult,
+        finalQuery:finalQuery,
+        finalQueries:finalQueries,
         success: true,
       };
     } catch (error: any) {
@@ -296,6 +334,53 @@ async function generateYoutubeQuery(userQuery: string): Promise<string> {
   } catch (e) {
     console.error("Error generating YouTube query:", e);
     return userQuery;
+  }
+}
+
+async function getQueryIntent(query: string, context?: string): Promise<{ intent: "search" | "chat"; finalQuery: string; finalQueries: string[] }> {
+  if (!query) return { intent: "chat", finalQuery: "", finalQueries: [] };
+
+  try {
+    const completion = await groq.chat.completions.create({
+      model: "llama-3.3-70b-versatile",
+      temperature: 0.1,
+      response_format: { type: "json_object" },
+      messages: [
+        {
+          role: "system",
+          content:
+            "You are a smart query understanding assistant. " +
+            "Your goal is to determine if the user input requires an external SEARCH to answer, or if it is a CHAT/conversational message. " +
+            "If it is a SEARCH intent, you must also generate a 'finalQuery' which is an optimized search string. " +
+            "Rules for 'finalQuery': " +
+            "1. Include necessary adjectives like 'best', 'top', 'cheap', 'history of'. " +
+            "2. If 'context' is provided, use it to resolve ambiguities (e.g. 'who is the ceo' + context 'Apple' -> 'Apple CEO'). " +
+            "3. Remove conversational filler ('tell me about', 'I want to know'). " +
+            "4. If intent is CHAT, 'finalQuery' should be empty string. " +
+            "5. 'finalQueries' should be a list of upto 5 other variants of the query covering other aspects of it." +
+            "Output JSON: { 'intent': 'search' | 'chat', 'finalQuery': string, 'finalQueries': string[] }"
+        },
+        {
+          role: "user",
+          content: JSON.stringify({ query, context: context || "" }),
+        },
+      ],
+    });
+
+    const raw = completion.choices?.[0]?.message?.content || "{}";
+    const parsed = JSON.parse(raw);
+    
+    return {
+      intent: parsed.intent === "search" ? "search" : "chat",
+      finalQuery: parsed.finalQuery || "",
+      finalQueries: Array.isArray(parsed.finalQueries) ? parsed.finalQueries : []
+    };
+
+  } catch (error) {
+    console.error('LLM Error determining intent:', error);
+    // Fallback: If error, assume chat to be safe, or just return original query as search? 
+    // Given the requirement, let's fallback to chat
+    return { intent: "chat", finalQuery: "", finalQueries: [] };
   }
 }
 
