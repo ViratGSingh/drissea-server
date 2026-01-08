@@ -6,9 +6,14 @@ import axios from "axios";
 import { Groq } from "groq-sdk";
 import Perplexity from "@perplexity-ai/perplexity_ai";
 import { Index } from "@upstash/vector";
+import { SarvamAIClient } from "sarvamai";
 
 const groq = new Groq({
   apiKey: process.env.GROQ_API_KEY || "",
+});
+
+const sarvamClient = new SarvamAIClient({
+  apiSubscriptionKey: process.env.SARVAM_API_KEY || "",
 });
 
 type OrganicResult = {
@@ -421,11 +426,9 @@ async function getQueryIntent(query: string, context?: string): Promise<{ intent
   if (!query) return { intent: "chat", finalQuery: "", finalQueries: [] };
 
   try {
-    const completion = await groq.chat.completions.create({
-      model: "llama-3.3-70b-versatile",
-      temperature: 0.1,
-      response_format: { type: "json_object" },
+    const response = await sarvamClient.chat.completions({
       messages: [
+        
         {
           role: "system",
           content:
@@ -439,7 +442,7 @@ async function getQueryIntent(query: string, context?: string): Promise<{ intent
             "4. If intent is CHAT, 'finalQuery' should be empty string. " +
             "5. 'finalQueries' should be a list of upto 5 other variants of the query covering other aspects of it. " +
             "6. NEVER correct spelling of proper nouns, names, brand names, usernames, or unique terms - preserve them exactly as written (e.g. 'techuils', 'Lyft', 'TikTok' should remain unchanged). " +
-            "Output JSON: { 'intent': 'search' | 'chat', 'finalQuery': string, 'finalQueries': string[] }"
+            "Output raw JSON only, no markdown code blocks: { 'intent': 'search' | 'chat', 'finalQuery': string, 'finalQueries': string[] }"
         },
         {
           role: "user",
@@ -447,8 +450,8 @@ async function getQueryIntent(query: string, context?: string): Promise<{ intent
         },
       ],
     });
-
-    const raw = completion.choices?.[0]?.message?.content || "{}";
+    
+    const raw = response.choices?.[0]?.message?.content || "{}";
     const parsed = JSON.parse(raw);
     
     return {
