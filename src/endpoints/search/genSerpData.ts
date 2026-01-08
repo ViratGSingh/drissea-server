@@ -5,6 +5,7 @@ import "dotenv/config";
 import axios from "axios";
 import { Groq } from "groq-sdk";
 import Perplexity from "@perplexity-ai/perplexity_ai";
+import { Index } from "@upstash/vector";
 
 const groq = new Groq({
   apiKey: process.env.GROQ_API_KEY || "",
@@ -123,7 +124,7 @@ export class FastGenSerpData extends OpenAPIRoute {
 
     try {
       // Run web search, YouTube search, and Map search in parallel
-      const [webSearchResult, youtubeSearchResult, mapSearchResult] = await Promise.all([
+      const [webSearchResult, youtubeSearchResult, mapSearchResult, instagramSearchResult] = await Promise.all([
         // Web search
         (async () => {
           const perpxApiKey = process.env.PERPX_API_KEY || "";
@@ -275,6 +276,84 @@ export class FastGenSerpData extends OpenAPIRoute {
             console.error("Map API Error:", error?.response?.data || error.message);
             return [];
           }
+        })(),
+        // Instagram search using Upstash Vector
+        (async () => {
+          try {
+            const upstashVectorUrl = process.env.UPSTASH_VECTOR_REST_URL;
+            const upstashVectorToken = process.env.UPSTASH_VECTOR_REST_TOKEN;
+
+            if (!upstashVectorUrl || !upstashVectorToken) {
+              console.warn("Upstash Vector credentials not set");
+              return [];
+            }
+
+            // Initialize Upstash Vector index
+            const index = new Index({
+              url: upstashVectorUrl,
+              token: upstashVectorToken,
+            });
+
+            // Perform vector search in Upstash Vector index
+            const queryResponse = await index.query({
+              data: finalQuery,
+              topK: 5,
+              includeMetadata: true,
+              includeData: true,
+            });
+
+            // Extract meaningful keywords from query (exclude common stop words)
+            const stopWords = new Set([
+              'a', 'an', 'the', 'is', 'are', 'was', 'were', 'be', 'been', 'being',
+              'have', 'has', 'had', 'do', 'does', 'did', 'will', 'would', 'could',
+              'should', 'may', 'might', 'must', 'can', 'to', 'of', 'in', 'for',
+              'on', 'with', 'at', 'by', 'from', 'as', 'into', 'through', 'during',
+              'before', 'after', 'above', 'below', 'between', 'under', 'again',
+              'further', 'then', 'once', 'here', 'there', 'when', 'where', 'why',
+              'how', 'all', 'each', 'few', 'more', 'most', 'other', 'some', 'such',
+              'no', 'nor', 'not', 'only', 'own', 'same', 'so', 'than', 'too', 'very',
+              'just', 'and', 'but', 'if', 'or', 'because', 'until', 'while', 'about',
+              'what', 'which', 'who', 'whom', 'this', 'that', 'these', 'those', 'am',
+              'i', 'me', 'my', 'myself', 'we', 'our', 'ours', 'ourselves', 'you', 'your',
+              'yours', 'yourself', 'yourselves', 'he', 'him', 'his', 'himself', 'she',
+              'her', 'hers', 'herself', 'it', 'its', 'itself', 'they', 'them', 'their',
+              'theirs', 'themselves', 'best', 'top', 'latest', 'new', 'good', 'great',
+              'find', 'show', 'get', 'see', 'look', 'search', 'want', 'need', 'like'
+            ]);
+
+            const queryKeywords = finalQuery
+              .toLowerCase()
+              .split(/\s+/)
+              .filter((word: string) => word.length > 2 && !stopWords.has(word));
+
+            // Filter results: score >= 0.8 and must have at least one query keyword in caption or username
+            const filteredResults = queryResponse
+              .filter((item: any) => {
+                // Only include results with score >= 0.8
+                if ((item.score || 0) < 0.8) return false;
+                
+                if (queryKeywords.length === 0) return true; // No keywords to match
+                
+                const caption = (item.metadata?.caption || '').toLowerCase();
+                const username = (item.metadata?.username || '').toLowerCase();
+                const combined = `${caption} ${username}`;
+                
+                // Check if at least one meaningful keyword from query exists in the result
+                return queryKeywords.some((keyword: string) => combined.includes(keyword));
+              })
+              .map((item: any) => ({
+                caption: item.metadata?.caption || null,
+                transcription: item.metadata?.transcription || null,
+                permalink: item.metadata?.permalink || null,
+                thumbnail_url: item.metadata?.thumbnail_url || null,
+                code: item.metadata?.code || null,
+              }));
+
+            return filteredResults;
+          } catch (error: any) {
+            console.error("Error fetching Upstash vector search results:", error);
+            return [];
+          }
         })()
       ]);
 
@@ -283,6 +362,7 @@ export class FastGenSerpData extends OpenAPIRoute {
         web: webSearchResult,
         youtube: youtubeSearchResult,
         map: mapSearchResult,
+        instagram: instagramSearchResult,
         finalQuery:finalQuery,
         finalQueries:finalQueries,
         success: true,
@@ -357,7 +437,8 @@ async function getQueryIntent(query: string, context?: string): Promise<{ intent
             "2. If 'context' is provided, use it to resolve ambiguities (e.g. 'who is the ceo' + context 'Apple' -> 'Apple CEO'). " +
             "3. Remove conversational filler ('tell me about', 'I want to know'). " +
             "4. If intent is CHAT, 'finalQuery' should be empty string. " +
-            "5. 'finalQueries' should be a list of upto 5 other variants of the query covering other aspects of it." +
+            "5. 'finalQueries' should be a list of upto 5 other variants of the query covering other aspects of it. " +
+            "6. NEVER correct spelling of proper nouns, names, brand names, usernames, or unique terms - preserve them exactly as written (e.g. 'techuils', 'Lyft', 'TikTok' should remain unchanged). " +
             "Output JSON: { 'intent': 'search' | 'chat', 'finalQuery': string, 'finalQueries': string[] }"
         },
         {

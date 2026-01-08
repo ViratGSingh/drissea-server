@@ -114,7 +114,7 @@ export class DrisseaSerpData extends OpenAPIRoute {
         permalink: item.metadata?.permalink || null,
         collaborators: item.metadata?.collaborators || [],
         thumbnail_url: item.metadata?.thumbnail_url || null,
-        video_url: item.metadata?.video_url || null,
+        //video_url: item.metadata?.video_url || null,
         code: item.metadata?.code || null,
       }));
 
