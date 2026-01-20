@@ -2,7 +2,7 @@ import { fromHono } from "chanfana";
 import { Hono } from "hono";
 import { serve } from '@hono/node-server';
 import { SearchProfileData } from "./endpoints/searchIgProfileData.js";
-import { DrisseaSerpData } from "./endpoints/search/drisseaSerpData.js";
+import { DrisseaSerpData } from "./endpoints/search/creatorSerpData.js";
 import { AltGetSessionData } from "./endpoints/altGetSessionData.js";
 import { YoutubeProfileSearchData } from "./endpoints/searchYtProfileData.js";
 import { YoutubeSearchData } from "./endpoints/searchYtData.js";
@@ -25,6 +25,7 @@ openapi.post("/api/search/youtube/channel", YoutubeProfileSearchData);
 openapi.post("/api/search/youtube", YoutubeSearchData);
 openapi.get("/dev/api/search/source/general", DevGenSerpData);
 openapi.post("/api/search", FastGenSerpData);
+openapi.post("/api/creator/search", DrisseaSerpData);
 openapi.post("/api/search/map", MapSearchData);
 
 //Creator APIs

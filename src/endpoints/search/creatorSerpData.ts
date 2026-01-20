@@ -15,11 +15,16 @@ export class DrisseaSerpData extends OpenAPIRoute {
     tags: ["Serp Search"],
     summary: "Get instagram source links from upstash vector",
     request: {
-      query: z.object({
-        query: Str({
-          description: "Search query to fetch Instagram links via SerpAPI",
-        }),
-      }),
+      body: {
+        content: {
+          "application/json": {
+            schema: z.object({
+              query: Str({description: "User query to understand and reply"}),
+              user_id: z.string(),
+            }),
+          },
+        },
+      },
     },
     responses: {
       "200": {
@@ -88,7 +93,7 @@ export class DrisseaSerpData extends OpenAPIRoute {
       );
     }
     const data = await this.getValidatedData<typeof this.schema>();
-    const { query } = data.query;
+    const { query, user_id } = data.body;
 
     // Initialize Upstash Vector index
     const index = new Index({
@@ -103,6 +108,7 @@ export class DrisseaSerpData extends OpenAPIRoute {
         topK: 10,
         includeMetadata: true,
         includeData: true,
+        filter: `user_id = '${user_id}'`,
       });
 
       // Transform response to only include required fields
@@ -115,6 +121,8 @@ export class DrisseaSerpData extends OpenAPIRoute {
         collaborators: item.metadata?.collaborators || [],
         thumbnail_url: item.metadata?.thumbnail_url || null,
         //video_url: item.metadata?.video_url || null,
+        transcription: item.metadata?.transcription || "",
+        framewatch: item.metadata?.framewatch || "",
         code: item.metadata?.code || null,
       }));
 
