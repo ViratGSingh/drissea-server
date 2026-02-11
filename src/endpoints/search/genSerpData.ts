@@ -4,7 +4,8 @@ import { type AppContext } from "../../types.js";
 import "dotenv/config";
 import axios from "axios";
 import { Groq } from "groq-sdk";
-import Perplexity from "@perplexity-ai/perplexity_ai";
+// import Perplexity from "@perplexity-ai/perplexity_ai";
+const { duckDuckGoBatchSearch } = require("../../scrapers/duckduckgo.js");
 import { Index } from "@upstash/vector";
 import { SarvamAIClient } from "sarvamai";
 
@@ -130,56 +131,20 @@ export class FastGenSerpData extends OpenAPIRoute {
     try {
       // Run web search, YouTube search, and Map search in parallel
       const [webSearchResult, youtubeSearchResult, mapSearchResult, instagramSearchResult] = await Promise.all([
-        // Web search
+        // Web search via DuckDuckGo
         (async () => {
-          const perpxApiKey = process.env.PERPX_API_KEY || "";
-          
-          if (!perpxApiKey) {
-            console.warn("PERPX_API_KEY is not set");
-            return [];
-          }
-
-          const client = new Perplexity({
-            apiKey: perpxApiKey,
-          });
-
-          // Combine main query with variants, deduplicate, and filter empty
-          const allQueries = Array.from(new Set([finalQuery, ...finalQueries])).filter(q => q && q.trim().length > 0);
-
-          const searchPromises = allQueries.map(async (q) => {
-            try {
-              const response = await client.search.create({
-                query: q,
-                max_results: 5,
-                max_tokens: 2500,
-                max_tokens_per_page: 250,
-                country: country.toUpperCase() || "IN"
-              });
-              return response.results || [];
-            } catch (err) {
-              console.error(`Perplexity search failed for query "${q}":`, err);
-              return [];
-            }
-          });
-
-          const resultsArrays = await Promise.all(searchPromises);
-          const allResults = resultsArrays.flat();
-
-          const seenUrls = new Set<string>();
-          const uniqueResults = allResults.filter((item: any) => {
-            if (!item.url || seenUrls.has(item.url)) return false;
-            if (!item.snippet || item.snippet.trim().length === 0) return false;
-            seenUrls.add(item.url);
-            return true;
-          });
-
-          return uniqueResults.map(
-            (item: any): OrganicResult => ({
+          try {
+            const allQueries = Array.from(new Set([finalQuery, ...finalQueries])).filter(q => q && q.trim().length > 0);
+            const results = await duckDuckGoBatchSearch(allQueries, country);
+            return results.map((item: any): OrganicResult => ({
               url: item.url,
               title: item.title,
-              excerpts: item.snippet || "",
-            })
-          );
+              excerpts: item.excerpts || "",
+            }));
+          } catch (err) {
+            console.error("DuckDuckGo search failed:", err);
+            return [];
+          }
         })(),
         // YouTube search
         (async () => {

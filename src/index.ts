@@ -9,6 +9,7 @@ import { YoutubeSearchData } from "./endpoints/searchYtData.js";
 import { DevGenSerpData } from "./endpoints/dev/devGenSerpData.js";
 import { MapSearchData } from "./endpoints/searchMapData.js";
 import { FastGenSerpData } from "./endpoints/search/genSerpData.js";
+import { BrowseDuckDuckGoData } from "./endpoints/search/browseDuckDuckGo.js";
 
 // Start a Hono app
 const app = new Hono<{ Bindings: Env }>();
@@ -25,6 +26,7 @@ openapi.post("/api/search/youtube/channel", YoutubeProfileSearchData);
 openapi.post("/api/search/youtube", YoutubeSearchData);
 openapi.get("/dev/api/search/source/general", DevGenSerpData);
 openapi.post("/api/search", FastGenSerpData);
+openapi.post("/api/browse/duckduckgo", BrowseDuckDuckGoData);
 openapi.post("/api/creator/search", DrisseaSerpData);
 openapi.post("/api/search/map", MapSearchData);
 
