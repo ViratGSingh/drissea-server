@@ -4,10 +4,9 @@ import { type AppContext } from "../../types.js";
 import "dotenv/config";
 import axios from "axios";
 import { Groq } from "groq-sdk";
-// import Perplexity from "@perplexity-ai/perplexity_ai";
-const { duckDuckGoBatchSearch } = require("../../scrapers/duckduckgo.js");
 import { Index } from "@upstash/vector";
 import { SarvamAIClient } from "sarvamai";
+import Perplexity from '@perplexity-ai/perplexity_ai';
 
 const groq = new Groq({
   apiKey: process.env.GROQ_API_KEY || "",
@@ -15,6 +14,10 @@ const groq = new Groq({
 
 const sarvamClient = new SarvamAIClient({
   apiSubscriptionKey: process.env.SARVAM_API_KEY || "",
+});
+
+const perplexityClient = new Perplexity({
+  apiKey: process.env.PERPX_API_KEY || "",
 });
 
 type OrganicResult = {
@@ -113,14 +116,13 @@ export class FastGenSerpData extends OpenAPIRoute {
     
 
     //Get query intent
-    const { intent, finalQuery, finalQueries} = await getQueryIntent(query, context);
+    const { intent, finalQuery } = await getQueryIntent(query, context);
 
     if (intent === "chat" || !finalQuery) {
        return {
          query,
          intent,
          finalQuery,
-         finalQueries,
          web: [],
          youtube: [],
          map: [],
@@ -131,18 +133,28 @@ export class FastGenSerpData extends OpenAPIRoute {
     try {
       // Run web search, YouTube search, and Map search in parallel
       const [webSearchResult, youtubeSearchResult, mapSearchResult, instagramSearchResult] = await Promise.all([
-        // Web search via DuckDuckGo
+        // Web search via Perplexity
         (async () => {
           try {
-            const allQueries = Array.from(new Set([finalQuery, ...finalQueries])).filter(q => q && q.trim().length > 0);
-            const results = await duckDuckGoBatchSearch(allQueries, country);
-            return results.map((item: any): OrganicResult => ({
-              url: item.url,
-              title: item.title,
-              excerpts: item.excerpts || "",
+            if (!process.env.PERPX_API_KEY) {
+              console.warn("Perplexity API key not set");
+              return [];
+            }
+
+            const search = await perplexityClient.search.create({
+              query: finalQuery,
+              max_results: 10,
+              max_tokens: 25000,
+              max_tokens_per_page: 2048
+            });
+
+            return search.results.map((result: any): OrganicResult => ({
+              url: result.url || "",
+              title: result.title || "",
+              excerpts: result.snippet || "",
             }));
           } catch (err) {
-            console.error("DuckDuckGo search failed:", err);
+            console.error("Perplexity search failed:", err);
             return [];
           }
         })(),
@@ -333,8 +345,7 @@ export class FastGenSerpData extends OpenAPIRoute {
         youtube: youtubeSearchResult,
         map: mapSearchResult,
         instagram: instagramSearchResult,
-        finalQuery:finalQuery,
-        finalQueries:finalQueries,
+        finalQuery: finalQuery,
         success: true,
       };
     } catch (error: any) {
@@ -387,13 +398,13 @@ async function generateYoutubeQuery(userQuery: string): Promise<string> {
   }
 }
 
-async function getQueryIntent(query: string, context?: string): Promise<{ intent: "search" | "chat"; finalQuery: string; finalQueries: string[] }> {
-  if (!query) return { intent: "chat", finalQuery: "", finalQueries: [] };
+async function getQueryIntent(query: string, context?: string): Promise<{ intent: "search" | "chat"; finalQuery: string }> {
+  if (!query) return { intent: "chat", finalQuery: "" };
 
   try {
     const response = await sarvamClient.chat.completions({
       messages: [
-        
+
         {
           role: "system",
           content:
@@ -405,9 +416,8 @@ async function getQueryIntent(query: string, context?: string): Promise<{ intent
             "2. If 'context' is provided, use it to resolve ambiguities (e.g. 'who is the ceo' + context 'Apple' -> 'Apple CEO'). " +
             "3. Remove conversational filler ('tell me about', 'I want to know'). " +
             "4. If intent is CHAT, 'finalQuery' should be empty string. " +
-            "5. 'finalQueries' should be a list of upto 5 other variants of the query covering other aspects of it. " +
-            "6. NEVER correct spelling of proper nouns, names, brand names, usernames, or unique terms - preserve them exactly as written (e.g. 'techuils', 'Lyft', 'TikTok' should remain unchanged). " +
-            "Output raw JSON only, no markdown code blocks: { 'intent': 'search' | 'chat', 'finalQuery': string, 'finalQueries': string[] }"
+            "5. NEVER correct spelling of proper nouns, names, brand names, usernames, or unique terms - preserve them exactly as written (e.g. 'techuils', 'Lyft', 'TikTok' should remain unchanged). " +
+            "Output raw JSON only, no markdown code blocks: { 'intent': 'search' | 'chat', 'finalQuery': string }"
         },
         {
           role: "user",
@@ -415,21 +425,20 @@ async function getQueryIntent(query: string, context?: string): Promise<{ intent
         },
       ],
     });
-    
+
     const raw = response.choices?.[0]?.message?.content || "{}";
     const parsed = JSON.parse(raw);
-    
+
     return {
       intent: parsed.intent === "search" ? "search" : "chat",
-      finalQuery: parsed.finalQuery || "",
-      finalQueries: Array.isArray(parsed.finalQueries) ? parsed.finalQueries : []
+      finalQuery: parsed.finalQuery || ""
     };
 
   } catch (error) {
     console.error('LLM Error determining intent:', error);
-    // Fallback: If error, assume chat to be safe, or just return original query as search? 
+    // Fallback: If error, assume chat to be safe, or just return original query as search?
     // Given the requirement, let's fallback to chat
-    return { intent: "chat", finalQuery: "", finalQueries: [] };
+    return { intent: "chat", finalQuery: "" };
   }
 }
 
